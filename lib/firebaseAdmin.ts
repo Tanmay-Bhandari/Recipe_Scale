@@ -1,91 +1,84 @@
-import * as admin from 'firebase-admin'
-import path from 'path'
+import admin from 'firebase-admin'
 import fs from 'fs'
+import path from 'path'
 
-function loadServiceAccountFromEnv() {
-  const env = process.env.FIREBASE_SERVICE_ACCOUNT
-  if (!env) return null
-  try {
-    if (env.trim().startsWith('{')) return JSON.parse(env)
-    const envPath = path.resolve(env)
-    if (fs.existsSync(envPath)) {
-      const raw = fs.readFileSync(envPath, 'utf8')
-      return JSON.parse(raw)
-    }
-    return null
-  } catch (e) {
-    console.warn('Failed to load FIREBASE_SERVICE_ACCOUNT:', e)
+function loadFromEnvOrFile() {
+  // Priority: FIREBASE_ADMIN_CREDENTIALS (JSON string) -> FIREBASE_ADMIN_KEY_BASE64 -> FIREBASE_SERVICE_ACCOUNT -> service-account.json -> GOOGLE_APPLICATION_CREDENTIALS -> separated env fields
+  const jsonEnv = process.env.FIREBASE_ADMIN_CREDENTIALS
+  if (jsonEnv) {
+    try { return JSON.parse(jsonEnv) } catch (e) { /* fallthrough */ }
+  }
+
+  const b64 = process.env.FIREBASE_ADMIN_KEY_BASE64
+  if (b64) {
+    try { return JSON.parse(Buffer.from(b64, 'base64').toString('utf8')) } catch (e) { /* fallthrough */ }
+  }
+
+  const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT
+  if (serviceAccountEnv) {
+    try {
+      if (serviceAccountEnv.trim().startsWith('{')) return JSON.parse(serviceAccountEnv)
+      const p = path.resolve(serviceAccountEnv)
+      if (fs.existsSync(p)) return JSON.parse(fs.readFileSync(p, 'utf8'))
+    } catch (e) { /* ignore */ }
+  }
+
+  const diskPath = path.resolve(process.cwd(), 'service-account.json')
+  if (fs.existsSync(diskPath)) {
+    try { return JSON.parse(fs.readFileSync(diskPath, 'utf8')) } catch (e) { /* ignore */ }
+  }
+
+  if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    // Let Google SDK resolve this automatically by returning null and letting admin.initializeApp() use ADC
     return null
   }
+
+  if (process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PROJECT_ID) {
+    return {
+      private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      client_email: process.env.FIREBASE_CLIENT_EMAIL,
+      project_id: process.env.FIREBASE_PROJECT_ID,
+    }
+  }
+
+  return null
 }
 
 export function initFirebaseAdmin() {
   if (admin.apps && admin.apps.length) return admin
 
-  const fromEnv = loadServiceAccountFromEnv()
+  const creds = loadFromEnvOrFile()
+  const opts: any = {}
 
-  if (process.env.GOOGLE_APPLICATION_CREDENTIALS && !fromEnv) {
+  if (creds) {
+    opts.credential = admin.credential.cert(creds as any)
+    if ((creds as any).project_id) opts.storageBucket = `${(creds as any).project_id}.appspot.com`
+  } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    // ADC: the Admin SDK will pick up the service account from the env var
     admin.initializeApp()
     return admin
   }
 
-  const serviceAccountPath = path.resolve(process.cwd(), 'service-account.json')
-  const serviceAccount = fromEnv ?? (() => {
-    try {
-      if (fs.existsSync(serviceAccountPath)) {
-        const raw = fs.readFileSync(serviceAccountPath, 'utf8')
-        return JSON.parse(raw)
-      }
-      return null
-    } catch { return null }
-  })()
-
-  const opts: any = {}
-  if (serviceAccount) {
-    opts.credential = admin.credential.cert(serviceAccount)
-    if (serviceAccount.project_id) {
-      opts.storageBucket = `${serviceAccount.project_id}.appspot.com`
-    }
-  }
-
-  // Allow overriding the storage bucket via environment variable
-  if (process.env.FIREBASE_STORAGE_BUCKET) {
-    opts.storageBucket = process.env.FIREBASE_STORAGE_BUCKET
-  }
+  if (process.env.FIREBASE_STORAGE_BUCKET) opts.storageBucket = process.env.FIREBASE_STORAGE_BUCKET
 
   if (Object.keys(opts).length) admin.initializeApp(opts)
   else admin.initializeApp()
 
-  // Fire-and-forget: validate the configured storage bucket exists and log a friendly
-  // warning at startup (useful in local development when the bucket may be missing).
+  // Optional: async check for storage bucket existence (non-blocking)
   try {
-    const bucketName = opts.storageBucket ?? (serviceAccount?.project_id ? `${serviceAccount.project_id}.appspot.com` : undefined)
+    const bucketName = opts.storageBucket
     if (bucketName && admin.storage) {
-      try {
-        const storage = admin.storage()
-        const bucket = storage.bucket(bucketName)
-        // check existence asynchronously without blocking initialization
-        void bucket.exists()
-          .then(([exists]) => {
-            if (!exists) {
-              console.warn(`Firebase Storage bucket "${bucketName}" not found. Create the bucket or set FIREBASE_STORAGE_BUCKET. See docs/firebase-setup.md`)
-            } else {
-              console.log(`Firebase Storage bucket "${bucketName}" exists.`)
-            }
-          })
-          .catch((err) => {
-            console.warn('Failed to verify Firebase Storage bucket existence:', err)
-          })
-      } catch (e) {
-        console.warn('Storage check skipped (admin.storage not available):', e)
-      }
-    } else {
-      console.warn('No Firebase Storage bucket configured. Set FIREBASE_STORAGE_BUCKET or include project_id in service account.')
+      void admin.storage().bucket(bucketName).exists().then(([exists]) => {
+        if (!exists) console.warn(`Firebase Storage bucket "${bucketName}" not found.`)
+      }).catch(() => {})
     }
-  } catch (e) {
-    console.warn('Unexpected error during Firebase storage startup check:', e)
-  }
+  } catch {}
 
+  return admin
+}
+
+export function getFirebaseAdmin() {
+  if (!admin.apps || !admin.apps.length) initFirebaseAdmin()
   return admin
 }
 
