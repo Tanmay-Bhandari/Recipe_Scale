@@ -1,0 +1,34 @@
+type User @table {
+  displayName: String!
+  createdAt: Timestamp!
+  email: String
+  photoUrl: String
+}
+
+type Recipe @table {
+  user: User!
+  title: String!
+  instructions: String!
+  createdAt: Timestamp!
+  updatedAt: Timestamp!
+  description: String
+  prepTime: String
+  cookTime: String
+  servings: String
+  category: String
+  notes: String
+  isFavorite: Boolean
+}
+
+type Ingredient @table {
+  name: String!
+  createdAt: Timestamp!
+  unit: String
+}
+
+type RecipeIngredient @table(key: ["recipe", "ingredient"]) {
+  recipe: Recipe!
+  ingredient: Ingredient!
+  quantity: Float!
+  notes: String
+}

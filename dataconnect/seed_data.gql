@@ -1,0 +1,114 @@
+mutation CreateDemoData @transaction @auth(level: USER, insecureReason: "This is a seed data mutation, only callable by authenticated users to populate the database.") {
+  user_insertMany(data: [
+    {
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      createdAt: "2024-01-01T10:00:00Z",
+      displayName: "Alice Smith",
+      email: "alice@example.com",
+      photoUrl: "https://example.com/alice.jpg"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440001",
+      createdAt: "2024-01-01T10:05:00Z",
+      displayName: "Bob Johnson",
+      email: "bob@example.com",
+      photoUrl: "https://example.com/bob.jpg"
+    }
+  ])
+  recipe_insertMany(data: [
+    {
+      id: "550e8400-e29b-41d4-a716-446655440002",
+      userId: "550e8400-e29b-41d4-a716-446655440000",
+      category: "Dessert",
+      cookTime: "30 minutes",
+      createdAt: "2024-01-02T11:00:00Z",
+      description: "A delicious chocolate cake.",
+      instructions: "Mix ingredients, bake for 30 minutes.",
+      isFavorite: true,
+      notes: "Great for parties!",
+      prepTime: "15 minutes",
+      servings: "8",
+      title: "Chocolate Fudge Cake",
+      updatedAt: "2024-01-02T11:30:00Z"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440003",
+      userId: "550e8400-e29b-41d4-a716-446655440001",
+      category: "Dinner",
+      cookTime: "45 minutes",
+      createdAt: "2024-01-03T12:00:00Z",
+      description: "Hearty lasagna for the whole family.",
+      instructions: "Layer pasta, sauce, and cheese, then bake.",
+      isFavorite: false,
+      notes: "Can be made ahead of time.",
+      prepTime: "20 minutes",
+      servings: "6",
+      title: "Classic Beef Lasagna",
+      updatedAt: "2024-01-03T12:45:00Z"
+    }
+  ])
+  ingredient_insertMany(data: [
+    {
+      id: "550e8400-e29b-41d4-a716-446655440004",
+      createdAt: "2024-01-04T09:00:00Z",
+      name: "Flour",
+      unit: "cups"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440005",
+      createdAt: "2024-01-04T09:05:00Z",
+      name: "Sugar",
+      unit: "cups"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440006",
+      createdAt: "2024-01-04T09:10:00Z",
+      name: "Eggs",
+      unit: "pieces"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440007",
+      createdAt: "2024-01-04T09:15:00Z",
+      name: "Ground Beef",
+      unit: "lbs"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440008",
+      createdAt: "2024-01-04T09:20:00Z",
+      name: "Lasagna Noodles",
+      unit: "sheets"
+    }
+  ])
+  recipeIngredient_insertMany(data: [
+    {
+      recipeId: "550e8400-e29b-41d4-a716-446655440002",
+      ingredientId: "550e8400-e29b-41d4-a716-446655440004",
+      notes: "All-purpose",
+      quantity: 2.0
+    },
+    {
+      recipeId: "550e8400-e29b-41d4-a716-446655440002",
+      ingredientId: "550e8400-e29b-41d4-a716-446655440005",
+      notes: "Granulated",
+      quantity: 1.5
+    },
+    {
+      recipeId: "550e8400-e29b-41d4-a716-446655440002",
+      ingredientId: "550e8400-e29b-41d4-a716-446655440006",
+      notes: "Large",
+      quantity: 3.0
+    },
+    {
+      recipeId: "550e8400-e29b-41d4-a716-446655440003",
+      ingredientId: "550e8400-e29b-41d4-a716-446655440007",
+      notes: "Lean",
+      quantity: 1.0
+    },
+    {
+      recipeId: "550e8400-e29b-41d4-a716-446655440003",
+      ingredientId: "550e8400-e29b-41d4-a716-446655440008",
+      notes: "Pre-cooked",
+      quantity: 9.0
+    }
+  ])
+}
