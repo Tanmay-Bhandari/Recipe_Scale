@@ -1,5 +1,6 @@
 import { initializeApp, getApps } from 'firebase/app'
 import { getFirestore, collection, getDocs } from 'firebase/firestore'
+import { apiUrl } from './api'
 
 const clientConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -51,16 +52,16 @@ export async function deleteRecipeClient(id: string) {
     }
   })()
 
-  const res = await fetch(`/api/recipes/${id}`, {
+  const url = apiUrl(`/api/recipes/${id}`)
+  const res2 = await fetch(url, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ deviceId }),
   })
+  const data = await res2.json().catch(() => null)
 
-  const data = await res.json().catch(() => null)
-
-  if (!res.ok) {
-    const msg = data?.error || `Delete failed with status ${res.status}`
+  if (!res2.ok) {
+    const msg = data?.error || `Delete failed with status ${res2.status}`
     throw new Error(msg)
   }
 

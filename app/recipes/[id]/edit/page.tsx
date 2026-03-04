@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { RecipeForm } from '@/components/recipe-form'
-import api from '@/lib/api'
+import api, { apiUrl } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
 import type { Recipe } from '@/lib/types'
 
@@ -19,7 +19,7 @@ export default function EditRecipePage() {
     let mounted = true
     void (async () => {
       try {
-        const data = await fetch(`/api/recipes/${id}`)
+        const data = await fetch(apiUrl(`/api/recipes/${id}`))
         if (!data.ok) throw new Error('Failed to fetch')
         const json = await data.json()
         if (!mounted) return

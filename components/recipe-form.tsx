@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { Ingredient, Recipe } from "@/lib/types"
-import api from "@/lib/api"
+import api, { apiUrl } from "@/lib/api"
 
 const UNITS = ["kg", "g", "lb", "oz", "ml", "L", "cups", "pieces"]
 
@@ -58,7 +58,7 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
 
       // Try backend API first (aggregated ingredient names)
       try {
-        const res = await fetch('/api/ingredients')
+        const res = await fetch(apiUrl('/api/ingredients'))
         if (res.ok) {
           const data = await res.json()
           if (Array.isArray(data)) {
@@ -68,7 +68,7 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
           // fallback: try fetching full recipes and extract ingredient names
           console.debug('/api/ingredients returned', res.status, 'trying /api/recipes')
           try {
-            const r2 = await fetch('/api/recipes')
+            const r2 = await fetch(apiUrl('/api/recipes'))
             if (r2.ok) {
               const obj = await r2.json()
               if (obj && typeof obj === 'object') {
