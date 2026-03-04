@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import initFirebaseAdmin from '@/lib/firebaseAdmin'
+import applyCorsHeaders from '@/lib/cors'
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,8 +11,12 @@ export async function GET(req: NextRequest) {
     if (!fb?.firestore) return NextResponse.json({ error: 'Firebase Firestore not initialized' }, { status: 500 })
     const firestore = fb.firestore()
     const doc = await firestore.collection('recipes').doc(id).get()
-    if (!doc.exists) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-    return NextResponse.json(doc.data())
+    if (!doc.exists) {
+      const res = NextResponse.json({ error: 'Not found' }, { status: 404 })
+      return applyCorsHeaders(res, req.headers.get('origin'))
+    }
+    const res = NextResponse.json(doc.data())
+    return applyCorsHeaders(res, req.headers.get('origin'))
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || String(err) }, { status: 500 })
   }
@@ -36,9 +41,11 @@ export async function PUT(req: NextRequest) {
     }
 
     await firestore.collection('recipes').doc(id).set(processed, { merge: true })
-    return NextResponse.json({ id })
+    const res = NextResponse.json({ id })
+    return applyCorsHeaders(res, req.headers.get('origin'))
   } catch (err: any) {
-    return NextResponse.json({ error: err?.message || String(err) }, { status: 500 })
+    const res = NextResponse.json({ error: err?.message || String(err) }, { status: 500 })
+    return applyCorsHeaders(res, req.headers.get('origin'))
   }
 }
 

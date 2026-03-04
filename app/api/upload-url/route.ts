@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import initFirebaseAdmin from '@/lib/firebaseAdmin'
+import applyCorsHeaders from '@/lib/cors'
 import fs from 'fs'
 import path from 'path'
 
@@ -55,9 +56,11 @@ export async function POST(req: NextRequest) {
       expires: Date.now() + 31536000000, // ~1 year
     })
 
-    return NextResponse.json({ uploadUrl, downloadUrl, path: file.name })
+    const res = NextResponse.json({ uploadUrl, downloadUrl, path: file.name })
+    return applyCorsHeaders(res, req.headers.get('origin'))
   } catch (err: any) {
     console.error('upload-url error:', err)
-    return NextResponse.json({ error: err?.message || String(err), stack: err?.stack }, { status: 500 })
+    const res = NextResponse.json({ error: err?.message || String(err), stack: err?.stack }, { status: 500 })
+    return applyCorsHeaders(res, req.headers.get('origin'))
   }
 }
