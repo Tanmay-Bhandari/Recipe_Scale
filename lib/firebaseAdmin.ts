@@ -53,16 +53,23 @@ export function initFirebaseAdmin() {
   if (creds) {
     opts.credential = admin.credential.cert(creds as any)
     if ((creds as any).project_id) opts.storageBucket = `${(creds as any).project_id}.appspot.com`
+    console.log('initFirebaseAdmin: using credentials from', (creds as any).__source || 'env/file')
   } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
     // ADC: the Admin SDK will pick up the service account from the env var
+    console.log('initFirebaseAdmin: using Application Default Credentials (GOOGLE_APPLICATION_CREDENTIALS)')
     admin.initializeApp()
     return admin
   }
 
   if (process.env.FIREBASE_STORAGE_BUCKET) opts.storageBucket = process.env.FIREBASE_STORAGE_BUCKET
 
-  if (Object.keys(opts).length) admin.initializeApp(opts)
-  else admin.initializeApp()
+  if (Object.keys(opts).length) {
+    console.log('initFirebaseAdmin: initializing admin with explicit options')
+    admin.initializeApp(opts)
+  } else {
+    console.log('initFirebaseAdmin: initializing admin with default app (no explicit creds)')
+    admin.initializeApp()
+  }
 
   // Optional: async check for storage bucket existence (non-blocking)
   try {

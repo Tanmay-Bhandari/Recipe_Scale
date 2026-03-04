@@ -29,6 +29,23 @@ export function initFirebaseAdmin() {
   // Prefer explicit env JSON, then GOOGLE_APPLICATION_CREDENTIALS, then repo file
   const fromEnv = loadServiceAccountFromEnv()
 
+  // Also support separated env fields (useful on hosts like Render)
+  if (!fromEnv && process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PROJECT_ID) {
+    try {
+      const sa = {
+        private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        client_email: process.env.FIREBASE_CLIENT_EMAIL,
+        project_id: process.env.FIREBASE_PROJECT_ID,
+      }
+      admin.initializeApp({ credential: admin.credential.cert(sa as any) });
+      initialized = true;
+      console.log('initFirebaseAdmin: initialized using separated FIREBASE_* env fields')
+      return admin;
+    } catch (e) {
+      console.warn('initFirebaseAdmin: failed to init from separated env fields', e)
+    }
+  }
+
   if (process.env.GOOGLE_APPLICATION_CREDENTIALS && !fromEnv) {
     // Let google-auth pick up the credentials from the file path
     admin.initializeApp();
@@ -52,6 +69,7 @@ export function initFirebaseAdmin() {
     // Initialize without explicit credentials and rely on ADC if available
     admin.initializeApp();
     initialized = true;
+    console.log('initFirebaseAdmin: initialized using Application Default Credentials')
     return admin;
   }
 
@@ -60,6 +78,7 @@ export function initFirebaseAdmin() {
   });
 
   initialized = true;
+  console.log('initFirebaseAdmin: initialized using service account JSON')
   return admin;
 }
 
