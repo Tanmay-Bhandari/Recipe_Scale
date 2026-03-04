@@ -1,6 +1,9 @@
 export type RecipePayload = any
 
-const BASE = (process.env.NEXT_PUBLIC_SERVER_URL || '').replace(/\/$/, '')
+// Prefer NEXT_PUBLIC_API_URL (explicit) but fall back to NEXT_PUBLIC_SERVER_URL
+const BASE = (
+  process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_SERVER_URL || ''
+).replace(/\/$/, '')
 
 export function apiUrl(path: string) {
   if (!path.startsWith('/')) path = `/${path}`
