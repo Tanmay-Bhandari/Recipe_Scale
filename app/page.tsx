@@ -112,7 +112,21 @@ export default function Home() {
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null)
   const [focusedRecipeId, setFocusedRecipeId] = useState<string | null>(null)
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<"todayMenu" | "recipes" | "packet" | "daily">("todayMenu")
+  const [activeTab, setActiveTab] = useState<"todayMenu" | "recipes" | "packet" | "daily">(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem("recipeScaleActiveTab")
+      if (saved === "recipes" || saved === "packet" || saved === "daily" || saved === "todayMenu") {
+        return saved
+      }
+    }
+    return "todayMenu"
+  })
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("recipeScaleActiveTab", activeTab)
+    }
+  }, [activeTab])
   const [session, setSession] = useState<AuthSession | null>(null)
   const [authOpen, setAuthOpen] = useState(false)
   const [pendingAdminRequests, setPendingAdminRequests] = useState<AdminApprovalRequest[]>([])
@@ -120,19 +134,21 @@ export default function Home() {
   const recipesRef = useRef<HTMLDivElement | null>(null)
   const { toast } = useToast()
   const isAdmin = session?.role === "admin"
+  const [isLoaded, setIsLoaded] = useState(false)
 
   useEffect(() => {
     // Seed default admin and read existing login session
     loadUsers()
     setSession(getSession())
     setPendingAdminRequests(listPendingAdminRequests())
+    setIsLoaded(true)
   }, [])
 
   useEffect(() => {
-    if (!isAdmin && activeTab !== "todayMenu") {
+    if (isLoaded && !isAdmin && activeTab !== "todayMenu") {
       setActiveTab("todayMenu")
     }
-  }, [isAdmin, activeTab])
+  }, [isLoaded, isAdmin, activeTab])
   
   const loadRecipes = useCallback(async () => {
     const t = toast({ title: "Loading recipes", description: "Contacting backend..." })
@@ -216,7 +232,7 @@ export default function Home() {
             deleted = true
           } catch (apiErr) {
             // Treat "Not found" as success (already deleted or sample item)
-            const msg = (apiErr && apiErr.message) || String(apiErr)
+            const msg = (apiErr && (apiErr as any).message) || String(apiErr)
             if (msg.toLowerCase().includes('not found')) {
               deleted = true
             } else if (msg.toLowerCase().includes('device id mismatch')) {

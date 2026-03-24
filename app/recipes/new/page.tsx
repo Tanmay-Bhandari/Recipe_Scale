@@ -16,9 +16,13 @@ export default function NewRecipePage() {
           // notify main page to reload recipes
           try { window.dispatchEvent(new Event('recipesSaved')) } catch (e) {}
           toast({ title: 'Saved', description: 'Recipe saved' })
+          if (typeof window !== 'undefined') localStorage.setItem("recipeScaleActiveTab", "recipes")
           router.push('/')
         }}
-        onClose={() => router.push('/')}
+        onClose={() => {
+          if (typeof window !== 'undefined') localStorage.setItem("recipeScaleActiveTab", "recipes")
+          router.push('/')
+        }}
       />
     </div>
   )

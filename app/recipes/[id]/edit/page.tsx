@@ -43,9 +43,13 @@ export default function EditRecipePage() {
           onAdd={(r) => {
             try { window.dispatchEvent(new Event('recipesSaved')) } catch (e) {}
             toast({ title: 'Saved', description: 'Recipe updated' })
+            if (typeof window !== 'undefined') localStorage.setItem("recipeScaleActiveTab", "recipes")
             router.push('/')
           }}
-          onClose={() => router.push('/')}
+          onClose={() => {
+            if (typeof window !== 'undefined') localStorage.setItem("recipeScaleActiveTab", "recipes")
+            router.push('/')
+          }}
         />
       ) : (
         <div>Loading...</div>
