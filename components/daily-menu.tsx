@@ -586,7 +586,7 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
 
               {/* Items */}
               {mealType === "breakfast" ? (
-                <div className="mt-4 space-y-4">
+                <div className="mt-4 space-y-3">
                   {/* Breakfast top metrics (as requested) */}
                   <div className="rounded-xl border border-border bg-background/50 p-3">
                     <div className="grid grid-cols-3 gap-2">
@@ -639,7 +639,7 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
                   </div>
 
                   {/* Add breakfast item: name + quantity + unit */}
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     <Label className="text-xs font-medium text-foreground">
                       Add Item (નાસ્તો નામ)
                     </Label>
