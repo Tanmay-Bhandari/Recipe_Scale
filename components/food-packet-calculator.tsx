@@ -126,11 +126,14 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
       const recipe = recipes.find((r) => r.id === item.recipeId)
       if (!recipe) continue
 
-      const scaleFactor = 1 / (recipe.packetYield || 1)
+      const scaleFactor = item.quantity / recipe.baseQuantity
+      const yieldScaleFactor = recipe.packetYield ? (packetCount / recipe.packetYield) : null
 
       for (const ing of recipe.ingredients) {
         const nameKey = ing.name.toLowerCase()
-        const rawAmount = ing.amount * scaleFactor * packetCount
+        const rawAmount = yieldScaleFactor 
+          ? ing.amount * yieldScaleFactor 
+          : ing.amount * scaleFactor * packetCount
 
         // choose a canonical unit for this ingredient's family (smallest unit available)
         const familyUnits = unitsFor(ing.unit)
@@ -173,30 +176,25 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
       .map((item) => {
         const recipe = recipes.find((r) => r.id === item.recipeId)
         if (!recipe) return null
-        const scaleFactor = 1 / (recipe.packetYield || 1)
+        const scaleFactor = item.quantity / recipe.baseQuantity
+        const yieldScaleFactor = recipe.packetYield ? (packetCount / recipe.packetYield) : null
+
         return {
           recipe,
-          perPacketQuantity: recipe.baseQuantity * scaleFactor,
-          totalQuantity: recipe.baseQuantity * scaleFactor * packetCount,
+          perPacketQuantity: item.quantity,
+          totalQuantity: item.quantity * packetCount,
           scaleFactor,
+          yieldScaleFactor,
           ingredients: recipe.ingredients.map((ing) => ({
             ...ing,
             perPacket: ing.amount * scaleFactor,
             total: ing.amount * scaleFactor * packetCount,
+            totalByYield: yieldScaleFactor ? (ing.amount * yieldScaleFactor) : null,
           })),
         }
       })
       .filter(Boolean)
   }, [packetItems, recipes, packetCount])
-
-  function toSmallestUnit(amount: number, unit: string) {
-    const familyUnits = unitsFor(unit)
-    const smallest = familyUnits[0] || unit
-    return {
-      amount: convert(amount, unit, smallest),
-      unit: smallest,
-    }
-  }
 
   const canCalculate = packetItems.length > 0 && packetCount > 0
 
@@ -211,6 +209,27 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
       // ignore
     }
   }, [packetItems, packetCount, showResults])
+
+  function formatPerPacket(amount: number, unit: string) {
+    let currentAmount = amount;
+    let currentUnit = unit;
+
+    if (currentUnit === 'kg' && currentAmount < 1) {
+      currentAmount = convert(currentAmount, 'kg', 'g');
+      currentUnit = 'g';
+    } else if (currentUnit === 'L' && currentAmount < 1) {
+      currentAmount = convert(currentAmount, 'L', 'ml');
+      currentUnit = 'ml';
+    } else if (currentUnit === 'lb' && currentAmount < 1) {
+      currentAmount = convert(currentAmount, 'lb', 'oz');
+      currentUnit = 'oz';
+    } else if (currentUnit === 'tbsp' && currentAmount < 1) {
+      currentAmount = convert(currentAmount, 'tbsp', 'tsp');
+      currentUnit = 'tsp';
+    }
+
+    return formatSmart(currentAmount, currentUnit);
+  }
 
   if (recipes.length === 0) {
     return (
@@ -400,6 +419,48 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
                       {recipe.packetYield ? ` | Yields: ${recipe.packetYield} pkts` : ""}
                     </p>
                   </div>
+                  <div className="mt-2 sm:mt-0 flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2 sm:flex-shrink-0">
+                    <Label className="sr-only" htmlFor={`qty-${item.recipeId}`}>
+                      Quantity for {recipe.name}
+                    </Label>
+                    {/* show quantity in the selected/display unit — stored quantity is always in recipe.baseUnit */}
+                    <Input
+                      id={`qty-${item.recipeId}`}
+                      type="number"
+                      step="any"
+                      min="0.01"
+                      value={(() => {
+                        const displayUnit = item.unit || recipe.baseUnit
+                        const displayVal = convert(item.quantity || 0, recipe.baseUnit, displayUnit)
+                        return Number.isFinite(displayVal)
+                          ? Number.isInteger(displayVal)
+                            ? String(displayVal)
+                            : displayVal.toFixed(2)
+                          : ""
+                      })()}
+                      onChange={(e) => {
+                        const displayUnit = item.unit || recipe.baseUnit
+                        const entered = parseFloat(e.target.value) || 0
+                        const valueInBase = convert(entered, displayUnit, recipe.baseUnit)
+                        updateItemQuantity(item.recipeId, valueInBase)
+                      }}
+                      className="h-8 w-14 sm:w-16 md:h-9 md:w-20 bg-card text-center text-xs sm:text-sm font-semibold"
+                    />
+
+                    {/* unit selector */}
+                    <select
+                      aria-label={`Unit for ${recipe.name}`}
+                      value={item.unit || recipe.baseUnit}
+                      onChange={(e) => updateItemUnit(item.recipeId, e.target.value)}
+                      className="rounded-md border border-border bg-card px-1.5 py-1 text-xs"
+                    >
+                      {unitsFor(recipe.baseUnit).map((u) => (
+                        <option key={u} value={u}>
+                          {u}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -495,7 +556,7 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
                     variant="secondary"
                     className="gap-1 bg-card px-3 py-1.5 text-xs"
                   >
-                    {recipe.name}
+                    {recipe.name}: {item.quantity} {recipe.baseUnit}
                   </Badge>
                 )
               })}
@@ -528,16 +589,21 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
                             <h3 style="margin-bottom:6px">${escapeHtml(recipe.name)} — ${escapeHtml(String(b.totalQuantity))} ${escapeHtml(recipe.baseUnit)}</h3>
                             <table>
                               <thead>
-                                <tr><th>Ingredient</th><th>Per Packet</th><th>Total</th></tr>
+                                <tr>
+                                  <th>Ingredient</th>
+                                  <th>Per Packet</th>
+                                  <th>Total</th>
+                                  ${recipe.packetYield ? `<th>By Yield (${escapeHtml(String(recipe.packetYield))})</th>` : ''}
+                                </tr>
                               </thead>
                               <tbody>
                                 ${b.ingredients.map((ing: any) => {
-                                  const small = toSmallestUnit(ing.perPacket, ing.unit)
                                   return `
                                   <tr>
                                     <td>${escapeHtml(ing.name)}</td>
-                                    <td style="text-align:right">${escapeHtml(formatSmart(small.amount, small.unit))}</td>
+                                    <td style="text-align:right">${escapeHtml(formatPerPacket(ing.perPacket, ing.unit))}</td>
                                     <td style="text-align:right">${escapeHtml(formatSmart(ing.total, ing.unit))}</td>
+                                    ${recipe.packetYield ? `<td style="text-align:right">${ing.totalByYield ? escapeHtml(formatSmart(ing.totalByYield, ing.unit)) : '-'}</td>` : ''}
                                   </tr>
                                 `
                                 }).join('')}
@@ -604,7 +670,7 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
                 perPacketQuantity: number;
                 totalQuantity: number;
                 scaleFactor: number;
-                ingredients: Array<{ perPacket: number; total: number; id: string; name: string; amount: number; unit: string; }>;
+                ingredients: Array<{ perPacket: number; total: number; totalByYield: number | null; id: string; name: string; amount: number; unit: string; }>;
               };
               return (
                 <div
@@ -648,10 +714,15 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
                           <th className="px-5 py-2.5 text-right">
                             Total ({packetCount} pkt{packetCount !== 1 ? "s" : ""})
                           </th>
+                          {recipe.packetYield && (
+                            <th className="px-5 py-2.5 text-right">
+                              By Yield ({recipe.packetYield})
+                            </th>
+                          )}
                         </tr>
                       </thead>
                       <tbody>
-                        {ingredients.map((ing: { perPacket: number; total: number; id: string; name: string; amount: number; unit: string; }) => (
+                        {ingredients.map((ing: any) => (
                           <tr
                             key={ing.id}
                             className="border-b border-border last:border-b-0"
@@ -660,10 +731,7 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
                               {ing.name}
                             </td>
                             <td className="px-5 py-3 text-right text-sm text-muted-foreground">
-                              {(() => {
-                                const small = toSmallestUnit(ing.perPacket, ing.unit)
-                                return formatSmart(small.amount, small.unit)
-                              })()}
+                              {formatPerPacket(ing.perPacket, ing.unit)}
                             </td>
                             <td className="px-3 py-3 text-center">
                               <ArrowRight className="mx-auto h-3.5 w-3.5 text-primary" />
@@ -671,6 +739,11 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
                             <td className="px-5 py-3 text-right text-sm font-semibold text-primary">
                               {formatSmart(ing.total, ing.unit)}
                             </td>
+                            {recipe.packetYield && (
+                              <td className="px-5 py-3 text-right text-sm font-semibold text-primary">
+                                {ing.totalByYield ? formatSmart(ing.totalByYield, ing.unit) : "-"}
+                              </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>
