@@ -13,6 +13,19 @@ import { deleteRecipeClient } from "@/lib/firebaseClient"
 import { useToast } from "@/hooks/use-toast"
 import { EmptyRecipes } from "@/components/empty-recipes"
 import { FoodPacketCalculator } from "@/components/food-packet-calculator"
+import { DailyMenu } from "@/components/daily-menu"
+import { TodayDailyMenu } from "@/components/today-daily-menu"
+import { AuthDialog } from "@/components/auth-dialog"
+import {
+  approveAdminRequest,
+  getSession,
+  listPendingAdminRequests,
+  logoutUser,
+  loadUsers,
+  rejectAdminRequest,
+  type AdminApprovalRequest,
+  type AuthSession,
+} from "@/lib/auth-client"
 import type { Recipe } from "@/lib/types"
 
 const SAMPLE_RECIPES: Recipe[] = [
@@ -99,10 +112,27 @@ export default function Home() {
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null)
   const [focusedRecipeId, setFocusedRecipeId] = useState<string | null>(null)
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<"recipes" | "packet">("recipes")
+  const [activeTab, setActiveTab] = useState<"todayMenu" | "recipes" | "packet" | "daily">("todayMenu")
+  const [session, setSession] = useState<AuthSession | null>(null)
+  const [authOpen, setAuthOpen] = useState(false)
+  const [pendingAdminRequests, setPendingAdminRequests] = useState<AdminApprovalRequest[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const recipesRef = useRef<HTMLDivElement | null>(null)
   const { toast } = useToast()
+  const isAdmin = session?.role === "admin"
+
+  useEffect(() => {
+    // Seed default admin and read existing login session
+    loadUsers()
+    setSession(getSession())
+    setPendingAdminRequests(listPendingAdminRequests())
+  }, [])
+
+  useEffect(() => {
+    if (!isAdmin && activeTab !== "todayMenu") {
+      setActiveTab("todayMenu")
+    }
+  }, [isAdmin, activeTab])
   
   const loadRecipes = useCallback(async () => {
     const t = toast({ title: "Loading recipes", description: "Contacting backend..." })
@@ -237,10 +267,59 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header activeTab={activeTab} onTabChange={setActiveTab} />
+      <Header
+        activeTab={activeTab}
+        onTabChange={(tab) => {
+          if (!isAdmin && tab !== "todayMenu") {
+            setAuthOpen(true)
+            return
+          }
+          setActiveTab(tab)
+        }}
+        isAdmin={isAdmin}
+        session={session}
+        onAuthClick={() => setAuthOpen(true)}
+        onLogoutClick={() => {
+          logoutUser()
+          setSession(null)
+          setActiveTab("todayMenu")
+        }}
+        pendingAdminRequests={pendingAdminRequests}
+        onApproveAdminRequest={(userId) => {
+          const res = approveAdminRequest(userId)
+          toast({ title: res.ok ? "Approved" : "Error", description: res.message })
+          setPendingAdminRequests(listPendingAdminRequests())
+        }}
+        onRejectAdminRequest={(userId) => {
+          const res = rejectAdminRequest(userId)
+          toast({ title: res.ok ? "Rejected" : "Error", description: res.message })
+          setPendingAdminRequests(listPendingAdminRequests())
+        }}
+      />
+
+      <AuthDialog
+        open={authOpen}
+        onClose={() => setAuthOpen(false)}
+        onSuccess={(s) => {
+          setSession(s)
+          setPendingAdminRequests(listPendingAdminRequests())
+          if (s.role === "admin") setActiveTab("recipes")
+        }}
+      />
 
       <main className="mx-auto max-w-5xl px-4 py-8 md:px-6 md:py-12">
-        {activeTab === "recipes" && (
+        {activeTab === "todayMenu" && (
+          <>
+            {!isAdmin ? (
+              <section className="mb-4 rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground">
+                Guest view: only `આજનું દૈનિક મેનુ` is available. Login as admin to access all options.
+              </section>
+            ) : null}
+            <TodayDailyMenu />
+          </>
+        )}
+
+        {isAdmin && activeTab === "recipes" && (
           <>
             {/* Hero section */}
             <section className="mb-8 md:mb-12">
@@ -322,7 +401,7 @@ export default function Home() {
           </>
         )}
 
-        {activeTab === "packet" && (
+        {isAdmin && activeTab === "packet" && (
           <>
             {/* Packet hero */}
             <section className="mb-8 md:mb-12">
@@ -337,6 +416,21 @@ export default function Home() {
             </section>
 
             <FoodPacketCalculator recipes={recipes} />
+          </>
+        )}
+
+        {isAdmin && activeTab === "daily" && (
+          <>
+            <section className="mb-8 md:mb-12">
+              <h2 className="font-serif text-3xl tracking-tight text-foreground md:text-4xl text-balance">
+                દૈનિક મેનુ
+              </h2>
+              <p className="mt-2 max-w-2xl text-base text-muted-foreground leading-relaxed">
+                Plan your daily meals using your saved recipes.
+              </p>
+            </section>
+
+            <DailyMenu recipes={recipes} />
           </>
         )}
       </main>
