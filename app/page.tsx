@@ -44,7 +44,7 @@ const SAMPLE_RECIPES: Recipe[] = [
       { id: "s7", name: "Baking Powder", amount: 2, unit: "tsp" },
       { id: "s8", name: "Vanilla Extract", amount: 1, unit: "tsp" },
     ],
-    createdAt: Date.now() - 100000,
+    createdAt: 1711200000000,
   },
   {
     id: "sample-2",
@@ -60,7 +60,7 @@ const SAMPLE_RECIPES: Recipe[] = [
       { id: "s14", name: "Baking Soda", amount: 1, unit: "tsp" },
       { id: "s15", name: "Salt", amount: 0.5, unit: "tsp" },
     ],
-    createdAt: Date.now() - 50000,
+    createdAt: 1711200001000,
   },
   {
     id: "sample-3",
@@ -74,7 +74,7 @@ const SAMPLE_RECIPES: Recipe[] = [
       { id: "s19", name: "Onion", amount: 1, unit: "pieces" },
       { id: "s20", name: "Garlic", amount: 2, unit: "clove" },
     ],
-    createdAt: Date.now() - 30000,
+    createdAt: 1711200002000,
   },
   {
     id: "sample-4",
@@ -88,7 +88,7 @@ const SAMPLE_RECIPES: Recipe[] = [
       { id: "s24", name: "Baking Powder", amount: 1, unit: "tsp" },
       { id: "s25", name: "Salt", amount: 0.5, unit: "tsp" },
     ],
-    createdAt: Date.now() - 20000,
+    createdAt: 1711200003000,
   },
   {
     id: "sample-5",
@@ -102,36 +102,17 @@ const SAMPLE_RECIPES: Recipe[] = [
       { id: "s29", name: "Olive Oil", amount: 1, unit: "tbsp" },
       { id: "s30", name: "Salt", amount: 1, unit: "tsp" },
     ],
-    createdAt: Date.now() - 10000,
+    createdAt: 1711200004000,
   },
 ]
 
 export default function Home() {
-  const [recipes, setRecipes] = useState<Recipe[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("recipes")
-        if (raw) {
-          const parsed = JSON.parse(raw)
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed
-        }
-      } catch (e) {}
-    }
-    return SAMPLE_RECIPES
-  })
+  const [recipes, setRecipes] = useState<Recipe[]>(SAMPLE_RECIPES)
   const [showForm, setShowForm] = useState(false)
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null)
   const [focusedRecipeId, setFocusedRecipeId] = useState<string | null>(null)
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<"todayMenu" | "recipes" | "packet" | "daily">(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem("recipeScaleActiveTab")
-      if (saved === "recipes" || saved === "packet" || saved === "daily" || saved === "todayMenu") {
-        return saved
-      }
-    }
-    return "todayMenu"
-  })
+  const [activeTab, setActiveTab] = useState<"todayMenu" | "recipes" | "packet" | "daily">("todayMenu")
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -148,6 +129,22 @@ export default function Home() {
   const [isLoaded, setIsLoaded] = useState(false)
 
   useEffect(() => {
+    // Load state from localStorage on mount (prevents hydration mismatch)
+    if (typeof window !== "undefined") {
+      try {
+        const rawRecipes = localStorage.getItem("recipes")
+        if (rawRecipes) {
+          const parsed = JSON.parse(rawRecipes)
+          if (Array.isArray(parsed) && parsed.length > 0) setRecipes(parsed)
+        }
+      } catch (e) {}
+
+      const savedTab = localStorage.getItem("recipeScaleActiveTab")
+      if (savedTab === "recipes" || savedTab === "packet" || savedTab === "daily" || savedTab === "todayMenu") {
+        setActiveTab(savedTab)
+      }
+    }
+
     // Seed default admin and read existing login session
     loadUsers()
     setSession(getSession())

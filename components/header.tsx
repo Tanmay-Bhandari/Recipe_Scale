@@ -118,6 +118,7 @@ export function Header({
           {isAdmin ? (
             <>
               <button
+                suppressHydrationWarning
                 onClick={() => onTabChange("recipes")}
                 className={`flex items-center gap-2 rounded-t-lg border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
                   activeTab === "recipes"
@@ -129,6 +130,7 @@ export function Header({
                 Recipes
               </button>
               <button
+                suppressHydrationWarning
                 onClick={() => onTabChange("packet")}
                 className={`flex items-center gap-2 rounded-t-lg border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
                   activeTab === "packet"
@@ -140,6 +142,7 @@ export function Header({
                 Food Packet Calculator
               </button>
               <button
+                suppressHydrationWarning
                 onClick={() => onTabChange("todayMenu")}
                 className={`flex items-center gap-2 rounded-t-lg border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
                   activeTab === "todayMenu"
@@ -151,6 +154,7 @@ export function Header({
                 આજનું દૈનિક મેનુ
               </button>
               <button
+                suppressHydrationWarning
                 onClick={() => onTabChange("daily")}
                 className={`flex items-center gap-2 rounded-t-lg border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
                   activeTab === "daily"
@@ -164,6 +168,7 @@ export function Header({
             </>
           ) : (
             <button
+              suppressHydrationWarning
               onClick={() => onTabChange("todayMenu")}
               className={`flex items-center gap-2 rounded-t-lg border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
                 activeTab === "todayMenu"
