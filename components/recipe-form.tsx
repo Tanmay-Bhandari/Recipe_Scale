@@ -198,7 +198,7 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
       baseQuantity: parseFloat(baseQuantity),
       baseUnit,
       packetYield: packetYield ? parseFloat(packetYield) : undefined,
-      image: imagePreview === null ? null : imagePreview ?? undefined,
+      image: (imagePreview === null ? null : imagePreview ?? undefined) as any,
       ingredients: validIngredients.map((ing, idx) => ({
         ...ing,
         id: editingRecipe?.ingredients[idx]?.id ?? uuidv4(),
@@ -212,15 +212,15 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
     async function uploadAndSave() {
       setIsSaving(true)
       const t = toast({ title: 'Saving recipe', description: 'Uploading image and saving recipe...' })
-      try {
-        let imageUrl = recipe.image
-        let imagePath: string | undefined = (editingRecipe as any)?.imagePath
+      let imageUrl: string | null | undefined = recipe.image
+      let imagePath: string | null | undefined = (editingRecipe as any)?.imagePath
 
+      try {
         // If the user removed the image (cleared preview), send explicit nulls
         // so the backend can remove stored image fields.
         if (imagePreview === null) {
-          imageUrl = null as any
-          imagePath = null as any
+          imageUrl = null
+          imagePath = null
         }
 
         if (selectedFile) {
@@ -246,7 +246,7 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
             imageUrl = uploadResp?.url
             imagePath = uploadResp?.path
           } catch (uploadErr: any) {
-            console.error('Image upload failed, falling back to storing base64 in DB:', uploadErr)
+            console.warn('Image upload failed, falling back to storing base64 in DB:', uploadErr?.message || String(uploadErr))
             // Keep base64 so we can send it with the recipe create/update request
             // (will be stored in Firestore as `imageBase64` field)
             ;(recipe as any).imageBase64 = base64
@@ -262,7 +262,7 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
               imageUrl = uploadResp?.url
               imagePath = uploadResp?.path
             } catch (uploadErr: any) {
-              console.error('Image upload failed, falling back to storing base64 in DB:', uploadErr)
+              console.warn('Image upload failed, falling back to storing base64 in DB:', uploadErr?.message || String(uploadErr))
               ;(recipe as any).imageBase64 = base64
             }
           }
@@ -270,25 +270,25 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
 
         // Save recipe to backend (create or update) via API helper
         if (isEditing) {
-          await api.updateRecipe(id, { ...recipe, image: imageUrl, imagePath })
-          onAdd({ ...recipe, image: imageUrl, imagePath })
+          await api.updateRecipe(id, { ...recipe, image: imageUrl, imagePath } as any)
+          onAdd({ ...recipe, image: imageUrl, imagePath } as any)
         } else {
-          const resp = await api.createRecipe({ ...recipe, image: imageUrl, imagePath })
+          const resp = await api.createRecipe({ ...recipe, image: imageUrl, imagePath } as any)
           const newId = resp?.id ?? id
-          onAdd({ ...recipe, image: imageUrl, imagePath, id: newId })
+          onAdd({ ...recipe, image: imageUrl, imagePath, id: newId } as any)
         }
         window.dispatchEvent(new Event("recipesSaved"))
         setTimeout(() => loadPreviousIngredients(), 100)
 
         t.update({ id: t.id, title: 'Saved', description: 'Recipe saved successfully', open: true })
       } catch (err: any) {
-        console.error('Save failed, falling back to localStorage:', err)
+        console.warn('Save failed, falling back to localStorage:', err?.message || String(err))
         // Fallback: save locally so the UI still updates when backend is unavailable
         try {
           const raw = localStorage.getItem('recipes')
           const arr = raw ? JSON.parse(raw) : []
           const existingIndex = arr.findIndex((r: any) => r.id === recipe.id)
-          const toSave = { ...recipe, image: imageUrl, imagePath }
+          const toSave: any = { ...recipe, image: imageUrl, imagePath }
           if (existingIndex !== -1) {
             arr[existingIndex] = toSave
           } else {
