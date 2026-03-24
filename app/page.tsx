@@ -107,7 +107,18 @@ const SAMPLE_RECIPES: Recipe[] = [
 ]
 
 export default function Home() {
-  const [recipes, setRecipes] = useState<Recipe[]>(SAMPLE_RECIPES)
+  const [recipes, setRecipes] = useState<Recipe[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("recipes")
+        if (raw) {
+          const parsed = JSON.parse(raw)
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed
+        }
+      } catch (e) {}
+    }
+    return SAMPLE_RECIPES
+  })
   const [showForm, setShowForm] = useState(false)
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null)
   const [focusedRecipeId, setFocusedRecipeId] = useState<string | null>(null)
@@ -151,11 +162,26 @@ export default function Home() {
   }, [isLoaded, isAdmin, activeTab])
   
   const loadRecipes = useCallback(async () => {
-    const t = toast({ title: "Loading recipes", description: "Contacting backend..." })
+    let localFound = false
+    try {
+      if (typeof window !== "undefined") {
+        const raw = localStorage.getItem("recipes")
+        if (raw) {
+          const parsed = JSON.parse(raw)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setRecipes(parsed)
+            localFound = true
+          }
+        }
+      }
+    } catch (e) {}
+
+    const loadingToast = localFound ? null : toast({ title: "Loading recipes", description: "Contacting backend..." })
+    
     try {
       const data = await api.listRecipes()
       if (!data) {
-        t.update({ id: t.id, title: "No recipes", description: "No recipes returned from backend", open: true })
+        if (loadingToast) loadingToast.update({ id: loadingToast.id, title: "No recipes", description: "No recipes returned from backend", open: true })
         return
       }
       const dedupeById = (items: Recipe[]) => {
@@ -167,15 +193,22 @@ export default function Home() {
         return Array.from(map.values())
       }
 
-      if (Array.isArray(data)) setRecipes(dedupeById(data as Recipe[]))
+      let newRecipes: Recipe[] = []
+      if (Array.isArray(data)) newRecipes = dedupeById(data as Recipe[])
       else if (typeof data === "object") {
         const arr = Object.entries(data).map(([k, v]) => ({ id: k, ...(v as any) }))
-        if (arr.length) setRecipes(dedupeById(arr as Recipe[]))
+        if (arr.length) newRecipes = dedupeById(arr as Recipe[])
       }
-      t.update({ id: t.id, title: "Loaded", description: "Recipes loaded from backend", open: true })
+
+      if (newRecipes.length > 0) {
+        setRecipes(newRecipes)
+        if (typeof window !== "undefined") localStorage.setItem("recipes", JSON.stringify(newRecipes))
+      }
+      
+      if (loadingToast) loadingToast.update({ id: loadingToast.id, title: "Loaded", description: "Recipes loaded from backend", open: true })
     } catch (err: any) {
-      console.warn("Failed to load recipes from backend:", err)
-      t.update({ id: t.id, title: "Load error", description: err?.message || "Failed to load recipes", open: true })
+      console.warn("Silent sync failed, using local data:", err?.message || String(err))
+      if (loadingToast) loadingToast.update({ id: loadingToast.id, title: "Offline Mode", description: "Using locally saved recipes", open: true })
     }
   }, [toast])
 

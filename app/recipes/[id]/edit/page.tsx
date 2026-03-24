@@ -19,14 +19,31 @@ export default function EditRecipePage() {
     let mounted = true
     void (async () => {
       try {
+        let localFound = false
+        if (typeof window !== 'undefined') {
+          const raw = localStorage.getItem('recipes')
+          if (raw) {
+            const arr = JSON.parse(raw)
+            if (Array.isArray(arr)) {
+              const found = arr.find((r: any) => r.id === id)
+              if (found) {
+                if (mounted) setRecipe(found)
+                localFound = true
+              }
+            }
+          }
+        }
+
         const data = await fetch(apiUrl(`/api/recipes/${id}`))
         if (!data.ok) throw new Error('Failed to fetch')
         const json = await data.json()
         if (!mounted) return
         setRecipe({ id, ...(json as any) })
       } catch (e) {
-        console.error(e)
-        toast({ title: 'Error', description: 'Failed to load recipe' })
+        console.warn('Silent sync failed:', e)
+        if (!recipe && mounted) {
+          toast({ title: 'Error', description: 'Failed to load recipe' })
+        }
       }
     })()
     return () => { mounted = false }
