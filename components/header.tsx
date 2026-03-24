@@ -113,7 +113,8 @@ export function Header({
         </div>
 
         {/* Nav tabs */}
-        <nav className="-mb-px flex gap-1" aria-label="Main navigation">
+        <div className="overflow-x-auto pb-px [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          <nav className="-mb-px flex min-w-max gap-1" aria-label="Main navigation">
           {isAdmin ? (
             <>
               <button
@@ -174,7 +175,8 @@ export function Header({
               આજનું દૈનિક મેનુ
             </button>
           )}
-        </nav>
+          </nav>
+        </div>
       </div>
     </header>
   )
