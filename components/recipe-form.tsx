@@ -34,6 +34,9 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
     editingRecipe ? String(editingRecipe.baseQuantity) : ""
   )
   const [baseUnit, setBaseUnit] = useState(editingRecipe?.baseUnit ?? "kg")
+  const [packetYield, setPacketYield] = useState(
+    editingRecipe?.packetYield ? String(editingRecipe.packetYield) : ""
+  )
   const [imagePreview, setImagePreview] = useState<string | null>(
     editingRecipe?.image ?? null
   )
@@ -194,6 +197,7 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
       name: name.trim(),
       baseQuantity: parseFloat(baseQuantity),
       baseUnit,
+      packetYield: packetYield ? parseFloat(packetYield) : undefined,
       image: imagePreview === null ? null : imagePreview ?? undefined,
       ingredients: validIngredients.map((ing, idx) => ({
         ...ing,
@@ -370,7 +374,7 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
         </div>
 
         {/* Recipe Info */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-4">
           <div className="md:col-span-1">
             <Label htmlFor="recipe-name" className="mb-1.5 block text-sm font-medium text-foreground">
               Recipe Name
@@ -416,6 +420,21 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div>
+            <Label htmlFor="packet-yield" className="mb-1.5 block text-sm font-medium text-foreground">
+              Total Food Packets
+            </Label>
+            <Input
+              id="packet-yield"
+              type="number"
+              step="1"
+              min="1"
+              placeholder="e.g. 100"
+              value={packetYield}
+              onChange={(e) => setPacketYield(e.target.value)}
+              className="bg-background"
+            />
           </div>
         </div>
 

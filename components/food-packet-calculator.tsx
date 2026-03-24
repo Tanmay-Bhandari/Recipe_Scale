@@ -126,7 +126,7 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
       const recipe = recipes.find((r) => r.id === item.recipeId)
       if (!recipe) continue
 
-      const scaleFactor = item.quantity / recipe.baseQuantity
+      const scaleFactor = 1 / (recipe.packetYield || 1)
 
       for (const ing of recipe.ingredients) {
         const nameKey = ing.name.toLowerCase()
@@ -173,11 +173,11 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
       .map((item) => {
         const recipe = recipes.find((r) => r.id === item.recipeId)
         if (!recipe) return null
-        const scaleFactor = item.quantity / recipe.baseQuantity
+        const scaleFactor = 1 / (recipe.packetYield || 1)
         return {
           recipe,
-          perPacketQuantity: item.quantity,
-          totalQuantity: item.quantity * packetCount,
+          perPacketQuantity: recipe.baseQuantity * scaleFactor,
+          totalQuantity: recipe.baseQuantity * scaleFactor * packetCount,
           scaleFactor,
           ingredients: recipe.ingredients.map((ing) => ({
             ...ing,
@@ -188,6 +188,15 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
       })
       .filter(Boolean)
   }, [packetItems, recipes, packetCount])
+
+  function toSmallestUnit(amount: number, unit: string) {
+    const familyUnits = unitsFor(unit)
+    const smallest = familyUnits[0] || unit
+    return {
+      amount: convert(amount, unit, smallest),
+      unit: smallest,
+    }
+  }
 
   const canCalculate = packetItems.length > 0 && packetCount > 0
 
@@ -387,50 +396,9 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
                       </Badge>
                     </div>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      Base: {recipe.baseQuantity} {recipe.baseUnit}
+                      Base: {recipe.baseQuantity} {recipe.baseUnit} 
+                      {recipe.packetYield ? ` | Yields: ${recipe.packetYield} pkts` : ""}
                     </p>
-                  </div>
-                  <div className="mt-2 sm:mt-0 flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2 sm:flex-shrink-0">
-                    <Label className="sr-only" htmlFor={`qty-${item.recipeId}`}>
-                      Quantity for {recipe.name}
-                    </Label>
-                    {/* show quantity in the selected/display unit — stored quantity is always in recipe.baseUnit */}
-                    <Input
-                      id={`qty-${item.recipeId}`}
-                      type="number"
-                      step="any"
-                      min="0.01"
-                      value={(() => {
-                        const displayUnit = item.unit || recipe.baseUnit
-                        const displayVal = convert(item.quantity || 0, recipe.baseUnit, displayUnit)
-                        return Number.isFinite(displayVal)
-                          ? Number.isInteger(displayVal)
-                            ? String(displayVal)
-                            : displayVal.toFixed(2)
-                          : ""
-                      })()}
-                      onChange={(e) => {
-                        const displayUnit = item.unit || recipe.baseUnit
-                        const entered = parseFloat(e.target.value) || 0
-                        const valueInBase = convert(entered, displayUnit, recipe.baseUnit)
-                        updateItemQuantity(item.recipeId, valueInBase)
-                      }}
-                      className="h-8 w-14 sm:w-16 md:h-9 md:w-20 bg-card text-center text-xs sm:text-sm font-semibold"
-                    />
-
-                    {/* unit selector */}
-                    <select
-                      aria-label={`Unit for ${recipe.name}`}
-                      value={item.unit || recipe.baseUnit}
-                      onChange={(e) => updateItemUnit(item.recipeId, e.target.value)}
-                      className="rounded-md border border-border bg-card px-1.5 py-1 text-xs"
-                    >
-                      {unitsFor(recipe.baseUnit).map((u) => (
-                        <option key={u} value={u}>
-                          {u}
-                        </option>
-                      ))}
-                    </select>
                   </div>
                   <Button
                     variant="ghost"
@@ -527,7 +495,7 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
                     variant="secondary"
                     className="gap-1 bg-card px-3 py-1.5 text-xs"
                   >
-                    {recipe.name}: {item.quantity} {recipe.baseUnit}
+                    {recipe.name}
                   </Badge>
                 )
               })}
@@ -553,7 +521,8 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
                     const breakdownHtml = `
                       <div class="section">
                         <h2>Recipe-wise Breakdown</h2>
-                        ${recipeBreakdowns.map(b => {
+                        ${recipeBreakdowns.filter(Boolean).map(b => {
+                          if (!b) return '';
                           const recipe = b.recipe
                           return `
                             <h3 style="margin-bottom:6px">${escapeHtml(recipe.name)} — ${escapeHtml(String(b.totalQuantity))} ${escapeHtml(recipe.baseUnit)}</h3>
@@ -562,13 +531,16 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
                                 <tr><th>Ingredient</th><th>Per Packet</th><th>Total</th></tr>
                               </thead>
                               <tbody>
-                                ${b.ingredients.map((ing: any) => `
+                                ${b.ingredients.map((ing: any) => {
+                                  const small = toSmallestUnit(ing.perPacket, ing.unit)
+                                  return `
                                   <tr>
                                     <td>${escapeHtml(ing.name)}</td>
-                                    <td style="text-align:right">${escapeHtml(formatSmart(ing.perPacket, ing.unit))}</td>
+                                    <td style="text-align:right">${escapeHtml(formatSmart(small.amount, small.unit))}</td>
                                     <td style="text-align:right">${escapeHtml(formatSmart(ing.total, ing.unit))}</td>
                                   </tr>
-                                `).join('')}
+                                `
+                                }).join('')}
                               </tbody>
                             </table>
                           `
@@ -688,7 +660,10 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
                               {ing.name}
                             </td>
                             <td className="px-5 py-3 text-right text-sm text-muted-foreground">
-                              {formatSmart(ing.perPacket, ing.unit)}
+                              {(() => {
+                                const small = toSmallestUnit(ing.perPacket, ing.unit)
+                                return formatSmart(small.amount, small.unit)
+                              })()}
                             </td>
                             <td className="px-3 py-3 text-center">
                               <ArrowRight className="mx-auto h-3.5 w-3.5 text-primary" />

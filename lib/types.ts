@@ -10,6 +10,8 @@ export interface Recipe {
   name: string
   baseQuantity: number
   baseUnit: string
+  // Total number of food packets this base recipe amount can make
+  packetYield?: number
   ingredients: Ingredient[]
   image?: string
   createdAt: number

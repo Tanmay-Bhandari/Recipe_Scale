@@ -54,12 +54,17 @@ export function RecipeCard({ recipe, onDelete, onEdit, isDimmed, onFocusToggle }
             <h3 className="font-serif text-lg text-foreground whitespace-normal md:line-clamp-1">
               {recipe.name}
             </h3>
-            <p className="text-sm text-muted-foreground whitespace-normal">
-              Base: {recipe.baseQuantity} {recipe.baseUnit}
-              <span className="mx-1.5 text-border">|</span>
-              {recipe.ingredients.length} ingredient
-              {recipe.ingredients.length !== 1 ? "s" : ""}
-            </p>
+            <div className="text-sm text-muted-foreground whitespace-normal">
+              <p>
+                Base: {recipe.baseQuantity} {recipe.baseUnit}
+                <span className="mx-1.5 text-border">|</span>
+                {recipe.ingredients.length} ingredient
+                {recipe.ingredients.length !== 1 ? "s" : ""}
+              </p>
+              {recipe.packetYield ? (
+                <p className="mt-0.5">Total Food Packets: {recipe.packetYield}</p>
+              ) : null}
+            </div>
           </div>
         </div>
 
