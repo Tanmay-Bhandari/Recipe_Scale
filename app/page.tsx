@@ -364,7 +364,7 @@ export default function Home() {
                 Guest view: only `આજનું દૈનિક મેનુ` is available. Login as admin to access all options.
               </section>
             ) : null}
-            <TodayDailyMenu />
+            <TodayDailyMenu recipes={recipes} />
           </>
         )}
 

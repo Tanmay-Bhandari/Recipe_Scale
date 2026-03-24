@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea"
 import { Label } from "@/components/ui/label"
 import { IngredientInput } from "@/components/ingredient-input"
 import {
@@ -379,7 +380,7 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
             <Label htmlFor="recipe-name" className="mb-1.5 block text-sm font-medium text-foreground">
               Recipe Name
             </Label>
-            <Input
+            <AutoResizeTextarea
               id="recipe-name"
               placeholder="e.g. Chocolate Cake"
               value={name}

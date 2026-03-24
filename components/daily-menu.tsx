@@ -4,6 +4,8 @@ import { CalendarDays, Trash2 } from "lucide-react"
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea"
+import { RecipeSuggestionInput } from "@/components/recipe-suggestion-input"
 import { Label } from "@/components/ui/label"
 import type { Recipe } from "@/lib/types"
 import {
@@ -15,6 +17,59 @@ import {
   type DailyMenuMeal,
   type MealType,
 } from "@/lib/daily-menu-storage"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
+const DAYS_OF_WEEK = [
+  "સોમવાર",
+  "મંગળવાર",
+  "બુધવાર",
+  "ગુરુવાર",
+  "શુક્રવાર",
+  "શનિવાર",
+  "રવિવાર",
+]
+
+const TITHI_MONTHS = [
+  "કારતક",
+  "માગશર",
+  "પોષ",
+  "મહા",
+  "ફાગણ",
+  "ચૈત્ર",
+  "વૈશાખ",
+  "જેઠ",
+  "અષાઢ",
+  "શ્રાવણ",
+  "ભાદરવો",
+  "આસો",
+]
+
+const TITHI_PHASES = ["સુદ", "વદ"]
+
+const TITHI_DAYS = [
+  "પડવો",
+  "બીજ",
+  "ત્રીજ",
+  "ચોથ",
+  "પાંચમ",
+  "છઠ",
+  "સાતમ",
+  "આઠમ",
+  "નોમ",
+  "દશમ",
+  "એકાદશી",
+  "બારસ",
+  "તેરસ",
+  "ચૌદસ",
+  "પૂર્ણિમા",
+  "અમાસ",
+]
 
 interface DailyMenuProps {
   recipes: Recipe[]
@@ -34,6 +89,10 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
     lunch: { name: "", quantity: 0, unit: "kg" },
     dinner: { name: "", quantity: 0, unit: "kg" },
   })
+  const [dayOfWeek, setDayOfWeek] = useState("")
+  const [tithiMonth, setTithiMonth] = useState("")
+  const [tithiPhase, setTithiPhase] = useState("")
+  const [tithiDay, setTithiDay] = useState("")
   const [saveNotice, setSaveNotice] = useState<string>("")
   const saveNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -107,10 +166,30 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
     setSavedDays(days)
     const current = loadDayMenu(selectedDay)
     if (current) {
-      setMeals(current)
+      setMeals(current.meals)
+      setDayOfWeek(current.dayOfWeek ?? "")
+      setTithiMonth(current.tithiMonth ?? "")
+      setTithiPhase(current.tithiPhase ?? "")
+      setTithiDay(current.tithiDay ?? "")
       setEditingDay(selectedDay)
     }
   }, [])
+
+  // Auto-calculate Day of Week when date changes
+  useEffect(() => {
+    if (!selectedDay) return
+    const date = new Date(selectedDay)
+    if (isNaN(date.getTime())) return
+
+    // getDay() returns 0 for Sunday, 1 for Monday, etc.
+    // Our DAYS_OF_WEEK: 0-Som, 1-Mangal, 2-Budh, 3-Guru, 4-Shukra, 5-Shani, 6-Ravi
+    // Date.getDay(): 0-Ravi, 1-Som, 2-Mangal, 3-Budh, 4-Guru, 5-Shukra, 6-Shani
+    const dayIndex = date.getDay() 
+    const gujaratiDayMap = ["રવિવાર", "સોમવાર", "મંગળવાર", "બુધવાર", "ગુરુવાર", "શુક્રવાર", "શનિવાર"]
+    const newDay = gujaratiDayMap[dayIndex]
+    
+    setDayOfWeek(newDay)
+  }, [selectedDay])
 
   useEffect(() => {
     // Ensure all unit selectors start with kg for existing/default rows.
@@ -246,23 +325,37 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
   function saveDay() {
     const day = selectedDay.trim()
     if (!day) return
-    saveDayMenu(day, meals)
+
+    // Combine for backward compatibility or simple display
+    const fullTithi = [tithiMonth, tithiPhase, tithiDay].filter(Boolean).join(" ")
+
+    saveDayMenu(day, {
+      meals,
+      dayOfWeek,
+      tithiMonth,
+      tithiPhase,
+      tithiDay,
+      tithi: fullTithi,
+    })
     setSavedDays((prev) => (prev.includes(day) ? prev : [day, ...prev]))
     setEditingDay(day)
     window.dispatchEvent(new Event("dailyMenuSaved"))
-    setSaveNotice("સાચવાઈ ગયું.")
+    setSaveNotice("સેવ સફળ!")
     if (saveNoticeTimerRef.current) clearTimeout(saveNoticeTimerRef.current)
-    saveNoticeTimerRef.current = setTimeout(() => {
-      setSaveNotice("")
-      saveNoticeTimerRef.current = null
-    }, 5000)
+    saveNoticeTimerRef.current = setTimeout(() => setSaveNotice(""), 3000)
   }
 
   function editDay(day: string) {
     setSelectedDay(day)
     setEditingDay(day)
     const data = loadDayMenu(day)
-    if (data) setMeals(data)
+    if (data) {
+      setMeals(data.meals)
+      setDayOfWeek(data.dayOfWeek ?? "")
+      setTithiMonth(data.tithiMonth ?? "")
+      setTithiPhase(data.tithiPhase ?? "")
+      setTithiDay(data.tithiDay ?? "")
+    }
   }
 
   const draggablePayload = useRef<{ mealType: MealType; itemId: string } | null>(null)
@@ -322,9 +415,70 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
               onChange={(e) => setSelectedDay(e.target.value)}
               className="bg-background"
             />
-            <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-              {/* નવા દિવસ માટે સેવ બટન પર ક્લિક કરો. */}
-            </p>
+          </div>
+
+          <div className="rounded-xl border border-border bg-background/50 p-4 lg:col-span-1">
+            <Label className="mb-1.5 block text-sm font-medium text-foreground">
+              વાર
+            </Label>
+            <Select value={dayOfWeek} onValueChange={setDayOfWeek}>
+              <SelectTrigger className="bg-background">
+                <SelectValue placeholder="વાર પસંદ કરો..." />
+              </SelectTrigger>
+              <SelectContent>
+                {DAYS_OF_WEEK.map((day) => (
+                  <SelectItem key={day} value={day}>
+                    {day}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="rounded-xl border border-border bg-background/50 p-4 lg:col-span-2">
+            <Label className="mb-1.5 block text-sm font-medium text-foreground">
+              તિથિ
+            </Label>
+            <div className="grid grid-cols-3 gap-2">
+              <Select value={tithiMonth} onValueChange={setTithiMonth}>
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="માસ" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TITHI_MONTHS.map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {m}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={tithiPhase} onValueChange={setTithiPhase}>
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="પક્ષ" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TITHI_PHASES.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {p}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={tithiDay} onValueChange={setTithiDay}>
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="તિથિ" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TITHI_DAYS.map((d) => (
+                    <SelectItem key={d} value={d}>
+                      {d}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Saved days */}
@@ -432,7 +586,7 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
 
               {/* Items */}
               {mealType === "breakfast" ? (
-                <div className="mt-4 space-y-3">
+                <div className="mt-4 space-y-4">
                   {/* Breakfast top metrics (as requested) */}
                   <div className="rounded-xl border border-border bg-background/50 p-3">
                     <div className="grid grid-cols-3 gap-2">
@@ -485,7 +639,7 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
                   </div>
 
                   {/* Add breakfast item: name + quantity + unit */}
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     <Label className="text-xs font-medium text-foreground">
                       Add Item (નાસ્તો નામ)
                     </Label>
@@ -494,9 +648,10 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
                         <Label className="mb-1.5 block text-[11px] font-medium text-muted-foreground">
                           નામ
                         </Label>
-                        <Input
+                        <RecipeSuggestionInput
                           value={breakfastNewName}
-                          onChange={(e) => setBreakfastNewName(e.target.value)}
+                          onChange={(v) => setBreakfastNewName(v)}
+                          recipes={recipes}
                           placeholder="નાસ્તો લખો..."
                           className="bg-background"
                         />
@@ -546,16 +701,22 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
                     {meal.items.map((it) => (
                       <div
                         key={it.id}
                         className="rounded-xl border border-border bg-background/50 p-3"
                       >
                         <div className="flex items-start justify-between gap-3">
-                          <span className="block text-base font-semibold text-foreground whitespace-normal break-words">
-                            {it.name}
-                          </span>
+                          <div className="flex-1">
+                            <RecipeSuggestionInput
+                              value={it.name}
+                              onChange={(v) => updateItem(mealType, it.id, { name: v })}
+                              recipes={recipes}
+                              placeholder="નાસ્તો લખો..."
+                              className="h-auto border-none bg-transparent p-0 text-base font-semibold shadow-none focus-visible:ring-0"
+                            />
+                          </div>
                           <Button
                             type="button"
                             variant="ghost"
@@ -610,7 +771,7 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
                   </div>
                 </div>
               ) : (
-                <div className="mt-4 space-y-3">
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
                   {meal.items.map((it) => (
                     <div
                       key={it.id}
@@ -637,9 +798,10 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
                         <Label className="mb-1.5 block text-[11px] font-medium text-muted-foreground">
                           નામ
                         </Label>
-                        <Input
+                        <RecipeSuggestionInput
                           value={it.value}
-                          onChange={(e) => updateItem(mealType, it.id, { value: e.target.value })}
+                          onChange={(v) => updateItem(mealType, it.id, { value: v })}
+                          recipes={recipes}
                           placeholder="નામ લખો..."
                           className="bg-background"
                         />
@@ -692,14 +854,15 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
                       <Label className="mb-1.5 block text-[11px] font-medium text-muted-foreground">
                         નામ
                       </Label>
-                      <Input
+                      <RecipeSuggestionInput
                         value={extraItemForm[mealType as "lunch" | "dinner"].name}
-                        onChange={(e) =>
+                        onChange={(v) =>
                           setExtraItemForm((prev) => ({
                             ...prev,
-                            [mealType]: { ...prev[mealType as "lunch" | "dinner"], name: e.target.value },
+                            [mealType]: { ...prev[mealType as "lunch" | "dinner"], name: v },
                           }))
                         }
+                        recipes={recipes}
                         placeholder=""
                         className="bg-background"
                       />

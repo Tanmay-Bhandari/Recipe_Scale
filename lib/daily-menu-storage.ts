@@ -16,7 +16,14 @@ export type DailyMenuMeal = {
   items: DailyMenuItem[]
 }
 
-export type DailyMenuState = Record<MealType, DailyMenuMeal>
+export type DailyMenuState = {
+  meals: Record<MealType, DailyMenuMeal>
+  dayOfWeek?: string
+  tithiMonth?: string
+  tithiPhase?: string
+  tithiDay?: string
+  tithi?: string
+}
 
 type StoreShape = {
   days: Record<string, DailyMenuState>

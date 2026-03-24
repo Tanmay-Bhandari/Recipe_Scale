@@ -1,138 +1,47 @@
+"use client"
+
 import { useState, useRef, useEffect, useMemo } from "react"
-import { Input } from "@/components/ui/input"
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea"
 import { cn } from "@/lib/utils"
 
-const COMMON_INGREDIENTS = [
-  "Flour",
-  "Sugar",
-  "Butter",
-  "Eggs",
-  "Milk",
-  "Baking Powder",
-  "Baking Soda",
-  "Salt",
-  "Vanilla Extract",
-  "Cocoa Powder",
-  "Chocolate",
-  "Almonds",
-  "Walnuts",
-  "Pecans",
-  "Oats",
-  "Honey",
-  "Oil",
-  "Coconut Oil",
-  "Olive Oil",
-  "Cream",
-  "Yogurt",
-  "Cheese",
-  "Yeast",
-  "Cinnamon",
-  "Nutmeg",
-  "Ginger",
-  "Lemon",
-  "Orange",
-  "Vanilla Bean",
-  "Caramel",
-  "Coffee",
-  "Matcha",
-  "Sesame",
-  "Peanut Butter",
-  "Almond Butter",
-  "Dates",
-  "Raisins",
-  "Blueberries",
-  "Strawberries",
-  "Raspberries",
-  "Bananas",
-  "Apples",
-  "Pumpkin",
-  "Carrot",
-  "Zucchini",
-  "Spinach",
-  "Garlic",
-  "Onion",
-  "Tomato",
-  "Bell Pepper",
-  "Basil",
-  "Thyme",
-  "Rosemary",
-  "Oregano",
-  "Cumin",
-  "Paprika",
-  "Black Pepper",
-  "Chili",
-  "Mustard",
-  "Soy Sauce",
-  "Fish Sauce",
-  "Vinegar",
-  "Lemon Juice",
-  "Lime Juice",
-  "Balsamic Vinegar",
-  "Rice",
-  "Pasta",
-  "Bread",
-  "Chickpea",
-  "Lentil",
-  "Beef",
-  "Chicken",
-  "Pork",
-  "Fish",
-  "Salmon",
-  "Shrimp",
-  "Tofu",
-  "Tempeh",
-]
-
-interface IngredientInputProps {
+interface RecipeSuggestionInputProps {
   value: string
   onChange: (value: string) => void
+  recipes: Array<{ name: string }>
   placeholder?: string
   className?: string
   disabled?: boolean
-  previousIngredients?: string[]
 }
 
-export function IngredientInput({
+export function RecipeSuggestionInput({
   value,
   onChange,
-  placeholder = "e.g. Flour",
+  recipes,
+  placeholder = "નામ લખો...",
   className,
   disabled = false,
-  previousIngredients = [],
-}: IngredientInputProps) {
+}: RecipeSuggestionInputProps) {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([])
   const [highlightedIndex, setHighlightedIndex] = useState(-1)
   const [userTyped, setUserTyped] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Combine previous ingredients with common ingredients (previous first)
   const allSuggestions = useMemo(() => {
-    const previousSet = new Set(previousIngredients.map(i => i.toLowerCase()))
-    const uniquePrevious = previousIngredients.filter((ing, idx) => 
-      previousIngredients.indexOf(ing) === idx
-    )
-    
-    const remaining = COMMON_INGREDIENTS.filter(
-      ing => !previousSet.has(ing.toLowerCase())
-    )
-    
-    return [...uniquePrevious, ...remaining]
-  }, [previousIngredients])
+    return recipes.map(r => r.name).sort()
+  }, [recipes])
 
   useEffect(() => {
-    // Only show suggestions if the user has actively typed and value length is reasonable
-    if (!userTyped || value.trim().length < 2) {
+    if (!userTyped || value.trim().length < 1) {
       setFilteredSuggestions([])
       setShowSuggestions(false)
       return
     }
 
-    const filtered = allSuggestions.filter((ing) =>
-      ing.toLowerCase().includes(value.toLowerCase())
-    ).slice(0, 6)
+    const filtered = allSuggestions.filter((name) =>
+      name.toLowerCase().includes(value.toLowerCase())
+    ).slice(0, 10)
 
     setFilteredSuggestions(filtered)
     setShowSuggestions(filtered.length > 0)
@@ -156,8 +65,8 @@ export function IngredientInput({
         )
         break
       case "Enter":
-        e.preventDefault()
         if (highlightedIndex >= 0) {
+          e.preventDefault()
           onChange(filteredSuggestions[highlightedIndex])
           setShowSuggestions(false)
           setUserTyped(false)
@@ -177,7 +86,6 @@ export function IngredientInput({
     setUserTyped(false)
     setFilteredSuggestions([])
     setHighlightedIndex(-1)
-    // return focus to the input for better UX
     inputRef.current?.focus()
   }
 
@@ -198,9 +106,9 @@ export function IngredientInput({
   }, [])
 
   return (
-    <div className="relative">
+    <div className="relative w-full">
       <AutoResizeTextarea
-        ref={inputRef as any}
+        ref={inputRef}
         placeholder={placeholder}
         value={value}
         onChange={(e) => {
@@ -208,7 +116,7 @@ export function IngredientInput({
           onChange(e.target.value)
         }}
         onKeyDown={handleKeyDown}
-        className={cn("min-h-[36px] px-3", className)}
+        className={cn("bg-background", className)}
         disabled={disabled}
         autoComplete="off"
       />
@@ -216,7 +124,7 @@ export function IngredientInput({
       {showSuggestions && filteredSuggestions.length > 0 && (
         <div
           ref={dropdownRef}
-          className="absolute left-0 right-0 top-full z-50 mt-1 max-h-48 overflow-y-auto rounded-lg border border-border bg-card shadow-md"
+          className="absolute left-0 right-0 top-full z-[100] mt-1 max-h-60 overflow-y-auto rounded-lg border border-border bg-card shadow-lg"
         >
           {filteredSuggestions.map((suggestion, index) => (
             <button
