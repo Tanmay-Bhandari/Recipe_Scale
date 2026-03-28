@@ -6,8 +6,6 @@ export type DailyMenuItem = {
   quantity: number
   unit: string
   value: string
-  note?: string
-  itemName?: string
 }
 
 export type DailyMenuMeal = {
@@ -32,8 +30,6 @@ type StoreShape = {
 }
 
 export const DAILY_MENU_STORAGE_KEY = "daily-menu-v1"
-
-import { saveDailyMenuToFirestore } from "./firebaseClient"
 
 export function getTodayKey(): string {
   const d = new Date()
@@ -72,23 +68,5 @@ export function saveDayMenu(dayKey: string, state: DailyMenuState): void {
   const store = loadDailyMenuStore()
   store.days[dayKey] = state
   localStorage.setItem(DAILY_MENU_STORAGE_KEY, JSON.stringify(store))
-  // Also attempt to persist to Firestore (fire-and-forget).
-  ;(async () => {
-    try {
-      const deviceId = ((): string | null => {
-        try {
-          if (typeof window === 'undefined') return null
-          return window.localStorage.getItem('deviceId')
-        } catch (e) {
-          return null
-        }
-      })()
-
-        // Persist to server API which writes to daily_menus/{dayKey}
-        await saveDailyMenuToFirestore(dayKey, state)
-    } catch (e) {
-      // ignore errors; localStorage is primary
-    }
-  })()
 }
 

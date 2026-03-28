@@ -119,18 +119,3 @@ export async function saveDailyMenuToFirestore(dayKey: string, state: any) {
     if (typeof console !== 'undefined') console.debug('saveDailyMenuToFirestore failed', err)
   }
 }
-
-export async function fetchDayMenuFromServer(dayKey: string): Promise<any | null> {
-  try {
-    const url = apiUrl(`/api/daily-menu?dayKey=${encodeURIComponent(dayKey)}`)
-    const res = await fetch(url)
-    if (!res.ok) return null
-    const data = await res.json().catch(() => null)
-    if (!data) return null
-    // server returns { id, dayKey, state, ... }
-    return data.state ?? null
-  } catch (err) {
-    if (typeof console !== 'undefined') console.debug('fetchDayMenuFromServer failed', err)
-    return null
-  }
-}

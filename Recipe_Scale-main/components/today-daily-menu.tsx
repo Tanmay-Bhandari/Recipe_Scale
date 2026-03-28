@@ -53,7 +53,6 @@ const formatNote = (value: number, unit: string) => {
 export function TodayDailyMenu({ recipes = [] }: { recipes?: Recipe[] }) {
   const [dayKey, setDayKey] = useState<string>(getTodayKey())
   const [menu, setMenu] = useState<DailyMenuState | null>(null)
-  const [serverLoading, setServerLoading] = useState<boolean>(false)
   const [activeMeal, setActiveMeal] = useState<MealType>("breakfast")
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({})
 
@@ -94,25 +93,8 @@ export function TodayDailyMenu({ recipes = [] }: { recipes?: Recipe[] }) {
   useEffect(() => {
     refresh(dayKey)
     const onSaved = () => refresh(dayKey)
-    const onFetchStart = () => setServerLoading(true)
-    const onFetchComplete = (e: any) => {
-      setServerLoading(false)
-      // If server reported an update, refresh local state
-      try {
-        if (e?.detail?.updated) refresh(dayKey)
-      } catch (err) {
-        // ignore
-      }
-    }
-
-    window.addEventListener('dailyMenuFetchStart', onFetchStart)
-    window.addEventListener('dailyMenuFetchComplete', onFetchComplete)
     window.addEventListener("dailyMenuSaved", onSaved)
-    return () => {
-      window.removeEventListener("dailyMenuSaved", onSaved)
-      window.removeEventListener('dailyMenuFetchStart', onFetchStart)
-      window.removeEventListener('dailyMenuFetchComplete', onFetchComplete)
-    }
+    return () => window.removeEventListener("dailyMenuSaved", onSaved)
   }, [dayKey])
 
   const mealOrder: MealType[] = useMemo(() => ["breakfast", "lunch", "dinner"], [])
@@ -157,7 +139,6 @@ export function TodayDailyMenu({ recipes = [] }: { recipes?: Recipe[] }) {
                     </div>
                   </div>
                 )}
-                {/* server loading indicator removed (handled via other UI if needed) */}
                 {(menu.tithi || (menu.tithiMonth && menu.tithiDay)) && (
                   <div className="col-span-1">
                     <Label className="mb-1.5 block text-xs font-medium text-muted-foreground">

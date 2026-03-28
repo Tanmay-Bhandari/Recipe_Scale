@@ -53,21 +53,12 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   // Optional: allow listing recent daily_menus for admin/debug - keep minimal
   try {
     const fb = initFirebaseAdmin()
     if (!fb?.firestore) return NextResponse.json({ error: 'Firebase Firestore not initialized' }, { status: 500 })
     const firestore = fb.firestore()
-
-    const dayKey = req.nextUrl.searchParams.get('dayKey')
-    if (dayKey) {
-      const docRef = firestore.collection('daily_menus').doc(String(dayKey))
-      const doc = await docRef.get()
-      if (!doc || !doc.exists) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-      return NextResponse.json({ id: doc.id, ...(doc.data() || {}) })
-    }
-
     const snap = await firestore.collection('daily_menus').orderBy('createdAt', 'desc').limit(50).get()
     const items: any[] = []
     snap.forEach((d: any) => items.push({ id: d.id, ...(d.data() || {}) }))

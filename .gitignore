@@ -1,0 +1,34 @@
+# Ignore Firebase Admin SDK private keys
+firebase-adminsdk-*.json
+node_modules/
+.next/
+out/
+dist/
+/.env
+.env.local
+.env.development
+.env.production
+/.vercel/
+/.idea/
+/.vscode/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-lock.yaml
+*.local
+coverage/
+uploads/
+public/uploads/
+/.firebase/
+/*.log
+# v0 runtime files (should only exist in preview, not in git)
+__v0_runtime_loader.js
+__v0_devtools.tsx
+__v0_jsx-dev-runtime.ts
+
+# Common ignores
+node_modules/
+.next/
+.env*.local
+.DS_Store
+service-account.json
