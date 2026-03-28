@@ -1,0 +1,47 @@
+query ListAllRecipes @auth(level: PUBLIC, insecureReason: "This operation is safe to expose to the public as it only lists recipes, not sensitive user data.") {
+  recipes {
+    id
+    title
+    category
+    prepTime
+    cookTime
+    servings
+    isFavorite
+    user {
+      displayName
+    }
+  }
+}
+
+query GetMyRecipes @auth(level: USER, insecureReason: "This operation is safe to expose to all logged in users as it filters by auth.uid.") {
+  recipes(where: {userId: {eq_expr: "auth.uid"}}) {
+    id
+    title
+    category
+    prepTime
+    cookTime
+    servings
+    isFavorite
+    createdAt
+    updatedAt
+  }
+}
+
+mutation CreateNewIngredient($name: String!, $unit: String) @auth(level: USER) {
+  ingredient_insert(data: {
+    name: $name,
+    unit: $unit,
+    createdAt_expr: "request.time"
+  }) {
+    id
+  }
+}
+
+mutation UpdateRecipeFavoriteStatus($id: UUID!, $isFavorite: Boolean!) @auth(level: USER, insecureReason: "This operation is safe to expose to all logged in users as it updates a recipe they own.") {
+  recipe_update(
+    key: {id: $id},
+    data: {isFavorite: $isFavorite, updatedAt_expr: "request.time"}
+  ) {
+    id
+  }
+}

@@ -1,0 +1,42 @@
+name: Deploy Firestore Rules
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-rules:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Write service account JSON
+        env:
+          SERVICE_ACCOUNT_JSON: ${{ secrets.SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$SERVICE_ACCOUNT_JSON" ]; then
+            echo "SERVICE_ACCOUNT_JSON secret is not set" >&2
+            exit 1
+          fi
+          echo "$SERVICE_ACCOUNT_JSON" > service-account-ci.json
+
+      - name: Configure ADC
+        run: |
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/service-account-ci.json" >> $GITHUB_ENV
+
+      - name: Deploy Firestore rules
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
+        run: |
+          firebase deploy --only firestore:rules --project recipescale-4ba26
