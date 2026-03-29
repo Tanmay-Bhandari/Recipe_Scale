@@ -38,6 +38,6 @@ export async function POST(req: NextRequest) {
     return applyCorsHeaders(res, req.headers.get('origin'))
   } catch (err: any) {
     const res = NextResponse.json({ error: err?.message || String(err) }, { status: 500 })
-    return applyCorsHeaders(res, (_req || req)?.headers.get('origin'))
+    return applyCorsHeaders(res, req.headers.get('origin'))
   }
 }
