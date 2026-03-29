@@ -136,7 +136,7 @@ export function TodayDailyMenu({ recipes = [] }: { recipes?: Recipe[] }) {
             </h4>
           </div>
         )}
-        <table className="w-full text-left border-collapse min-w-[700px]">
+        <table className="w-full text-left border-collapse min-w-[700px] table-fixed">
           <thead>
             <tr className={`border-b border-border ${isBlue ? 'bg-blue-50/20' : 'bg-muted/30'}`}>
               <th className="px-4 py-4 text-sm font-bold text-muted-foreground uppercase tracking-wider w-[25%] border-r border-border/50 text-center">વાનગી</th>
@@ -165,14 +165,14 @@ export function TodayDailyMenu({ recipes = [] }: { recipes?: Recipe[] }) {
                             {it.label}
                           </div>
                         )}
-                        <div className="text-lg font-bold text-foreground leading-snug break-all">
+                        <div className="text-lg font-bold text-foreground leading-snug break-words">
                           {it.name || "-"}
                         </div>
                       </div>
                     </td>
                     <td className="p-4 align-middle border-r border-border/30 text-center">
-                      <div className="flex flex-col items-center gap-2">
-                        <span className="text-lg font-medium text-foreground">{it.value || "-"}</span>
+                      <div className="flex flex-col items-center gap-2 px-2">
+                        <span className="text-lg font-medium text-foreground break-words text-center block w-full">{it.value || "-"}</span>
                         {matchingRecipe && hasQty && (
                           <Button 
                             variant="ghost" 

@@ -698,7 +698,7 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
                             </h4>
                           </div>
                         )}
-                        <table className="w-full text-left border-collapse min-w-[700px]">
+                        <table className="w-full text-left border-collapse min-w-[700px] table-fixed">
                           <thead>
                             <tr className={`border-b border-border ${isBlue ? 'bg-blue-50/20' : 'bg-muted/30'}`}>
                               <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wider w-[25%] border-r border-border/50">વિગત / વાનગી</th>
