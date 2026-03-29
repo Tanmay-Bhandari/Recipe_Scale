@@ -199,66 +199,58 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
     const days = listSavedDays()
     setSavedDays(days)
 
-    const current = loadDayMenu(selectedDay)
-    if (current) {
-      // Migrate existing items: if label is missing but name is present for Lunch/Dinner
-      // move name to label and clear name, as requested.
-      const migratedMeals = { ...current.meals }
+    const loadData = async (day: string) => {
+      // Use helper to apply state safely
+      const applyMenuState = (current: DailyMenuState | null) => {
+        if (current) {
+          const migratedMeals = { ...current.meals }
+          const migrateItems = (items: DailyMenuItem[]) =>
+            items.map(it => {
+              if (!it.label && it.name) {
+                return { ...it, label: it.name, name: "" }
+              }
+              return it
+            })
 
-      const migrateItems = (items: DailyMenuItem[]) =>
-        items.map(it => {
-          if (!it.label && it.name) {
-            return { ...it, label: it.name, name: "" }
-          }
-          return it
-        })
+          migratedMeals.lunch = { ...migratedMeals.lunch, items: migrateItems(migratedMeals.lunch.items) }
+          migratedMeals.dinner = { ...migratedMeals.dinner, items: migrateItems(migratedMeals.dinner.items) }
 
-      migratedMeals.lunch = {
-        ...migratedMeals.lunch,
-        items: migrateItems(migratedMeals.lunch.items)
+          setMeals(migratedMeals)
+          setDayOfWeek(current.dayOfWeek ?? "")
+          setTithiMonth(current.tithiMonth ?? "")
+          setTithiPhase(current.tithiPhase ?? "")
+          setTithiDay(current.tithiDay ?? "")
+          setEditingDay(day)
+        } else {
+          setMeals({
+            breakfast: { calories: "", categories: "", maximum: "", totalOverride: "0", items: BREAKFAST_DEFAULT_ITEMS.map((name) => namedItem(name)) },
+            lunch: { calories: "", categories: "", maximum: "", totalOverride: "0", items: LUNCH_DEFAULT_ITEMS.map((name) => namedItem(name)) },
+            dinner: { calories: "", categories: "", maximum: "", totalOverride: "0", items: DINNER_DEFAULT_ITEMS.map((name) => namedItem(name)) },
+          })
+          setDayOfWeek("")
+          setTithiMonth("")
+          setTithiPhase("")
+          setTithiDay("")
+          setEditingDay(day)
+        }
       }
-      migratedMeals.dinner = {
-        ...migratedMeals.dinner,
-        items: migrateItems(migratedMeals.dinner.items)
-      }
 
-      setMeals(migratedMeals)
-      setDayOfWeek(current.dayOfWeek ?? "")
-      setTithiMonth(current.tithiMonth ?? "")
-      setTithiPhase(current.tithiPhase ?? "")
-      setTithiDay(current.tithiDay ?? "")
-      setEditingDay(selectedDay)
-    } else {
-      // Reset to defaults if no data exists for selected day
-      setMeals({
-        breakfast: {
-          calories: "",
-          categories: "",
-          maximum: "",
-          totalOverride: "0",
-          items: BREAKFAST_DEFAULT_ITEMS.map((name) => namedItem(name)),
-        },
-        lunch: {
-          calories: "",
-          categories: "",
-          maximum: "",
-          totalOverride: "0",
-          items: LUNCH_DEFAULT_ITEMS.map((name) => namedItem(name)),
-        },
-        dinner: {
-          calories: "",
-          categories: "",
-          maximum: "",
-          totalOverride: "0",
-          items: DINNER_DEFAULT_ITEMS.map((name) => namedItem(name)),
-        },
-      })
-      setDayOfWeek("")
-      setTithiMonth("")
-      setTithiPhase("")
-      setTithiDay("")
-      setEditingDay(selectedDay)
+      // 1. Try local first for fast feedback
+      const local = loadDayMenu(day)
+      applyMenuState(local)
+
+      // 2. Fetch from Firestore for cloud source of truth
+      try {
+        const cloud = await loadDayMenuFromFirestore(day)
+        if (cloud) {
+          applyMenuState(cloud)
+        }
+      } catch (err) {
+        console.error("Error loading daily menu from firestore:", err)
+      }
     }
+
+    void loadData(selectedDay)
   }, [selectedDay])
 
   // Auto-calculate Day of Week when date changes
@@ -437,14 +429,6 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
   function editDay(day: string) {
     setSelectedDay(day)
     setEditingDay(day)
-    const data = loadDayMenu(day)
-    if (data) {
-      setMeals(data.meals)
-      setDayOfWeek(data.dayOfWeek ?? "")
-      setTithiMonth(data.tithiMonth ?? "")
-      setTithiPhase(data.tithiPhase ?? "")
-      setTithiDay(data.tithiDay ?? "")
-    }
   }
 
   const draggablePayload = useRef<{ mealType: MealType; itemId: string } | null>(null)
