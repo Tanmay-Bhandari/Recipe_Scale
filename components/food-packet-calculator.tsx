@@ -238,11 +238,10 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
           <Package className="h-6 w-6 text-primary" />
         </div>
         <h3 className="font-serif text-lg text-foreground">
-          No recipes available
+          કોઈ રેસીપી ઉપલબ્ધ નથી
         </h3>
         <p className="mt-1 max-w-xs text-sm text-muted-foreground">
-          Add recipes in the Recipes tab first, then come back here to build
-          food packets.
+          પહેલા રેસીપી ટેબમાં જઈ રેસીપી ઉમેરો, પછી ફૂડ પેકેટ બનાવવા અહીં આવો.
         </p>
       </div>
     )
@@ -258,10 +257,10 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
           </div>
           <div>
             <h3 className="font-serif text-lg text-foreground">
-              Build Your Food Packet
+              તમારું ફૂડ પેકેટ બનાવો
             </h3>
             <p className="text-sm text-muted-foreground">
-              Search and select recipes, then set how much of each goes into one packet
+              વાનગી શોધો અને આખી પેકેટમાં કેટલી આઈટમ રાખવી છે તે નક્કી કરો
             </p>
           </div>
         </div>
@@ -273,7 +272,7 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
               variant="outline"
               size="sm"
               onClick={() => {
-                if (!confirm('Remove all selected recipes from the packet?')) return
+                if (!confirm('શું તમે આ પેકેટમાંથી બધી પસંદ કરેલી રેસીપી દૂર કરવા માંગો છો?')) return
                 setPacketItems([])
                 setShowResults(false)
                 setRecipeSearch("")
@@ -282,7 +281,7 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
               className="gap-2"
             >
               <Trash2 className="h-4 w-4" />
-              Clear All
+              બધું સાફ કરો
             </Button>
           </div>
         )}
@@ -291,12 +290,12 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
         {availableRecipes.length > 0 && (
           <div className="relative mb-5" ref={dropdownRef}>
             <Label className="mb-1.5 block text-sm font-medium text-foreground">
-              Search and add a recipe
+              વાનગી શોધો અને ઉમેરો
             </Label>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Type to search recipes..."
+                placeholder="વાનગી શોધવા માટે લખો..."
                 value={recipeSearch}
                 onChange={(e) => {
                   setRecipeSearch(e.target.value)
@@ -325,7 +324,7 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
               <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-border bg-card shadow-lg">
                 {filteredAvailable.length === 0 ? (
                   <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-                    No matching recipes found
+                    કોઈ સરખી વાનગી મળી નથી
                   </div>
                 ) : (
                   filteredAvailable.map((recipe) => (
@@ -355,7 +354,7 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
                         </span>
                         <span className="block text-xs text-muted-foreground">
                           {recipe.baseQuantity} {recipe.baseUnit} &middot;{" "}
-                          {recipe.ingredients.length} ingredients
+                          {recipe.ingredients.length} સામગ્રી
                         </span>
                       </div>
                       <Check className="h-4 w-4 shrink-0 text-primary opacity-0 group-hover:opacity-100" />
@@ -369,7 +368,7 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
 
         {availableRecipes.length === 0 && packetItems.length > 0 && (
           <p className="mb-5 text-sm text-muted-foreground">
-            All recipes have been added to the packet.
+            બધી જ રેસીપી પેકેટમાં ઉમેરી દેવામાં આવી છે.
           </p>
         )}
 
@@ -378,7 +377,7 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
           <div className="rounded-lg border-2 border-dashed border-border py-8 text-center">
             <ChevronDown className="mx-auto mb-2 h-5 w-5 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              Search and select recipes above to start building your food packet
+              તમારું ફૂડ પેકેટ બનાવવા માટે ઉપરથી વાનગી શોધો અને પસંદ કરો
             </p>
           </div>
         ) : (
@@ -411,17 +410,17 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
                         {recipe.name}
                       </span>
                       <Badge variant="secondary" className="md:shrink-0 text-[9px] md:text-[10px]">
-                        {recipe.ingredients.length} ingredients
+                        {recipe.ingredients.length} સામગ્રી
                       </Badge>
                     </div>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      Base: {recipe.baseQuantity} {recipe.baseUnit} 
-                      {recipe.packetYield ? ` | Yields: ${recipe.packetYield} pkts` : ""}
+                      બેઝ: {recipe.baseQuantity} {recipe.baseUnit} 
+                      {recipe.packetYield ? ` | યીલ્ડ: ${recipe.packetYield} પેકેટો` : ""}
                     </p>
                   </div>
                   <div className="mt-2 sm:mt-0 flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2 sm:flex-shrink-0">
                     <Label className="sr-only" htmlFor={`qty-${item.recipeId}`}>
-                      Quantity for {recipe.name}
+                      {recipe.name} માટે જથ્થો
                     </Label>
                     {/* show quantity in the selected/display unit — stored quantity is always in recipe.baseUnit */}
                     <Input
@@ -449,7 +448,7 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
 
                     {/* unit selector */}
                     <select
-                      aria-label={`Unit for ${recipe.name}`}
+                      aria-label={`${recipe.name} માટે એકમ`}
                       value={item.unit || recipe.baseUnit}
                       onChange={(e) => updateItemUnit(item.recipeId, e.target.value)}
                       className="rounded-md border border-border bg-card px-1.5 py-1 text-xs"
@@ -485,10 +484,10 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
           </div>
           <div>
             <h3 className="font-serif text-lg text-foreground">
-              How Many Packets?
+              કેટલા પેકેટ બનાવવા છે?
             </h3>
             <p className="text-sm text-muted-foreground">
-              Enter the total number of food packets you want to prepare
+              તમે કુલ કેટલા ફૂડ પેકેટો તૈયાર કરવાના છો તે સંખ્યા લખો
             </p>
           </div>
         </div>
@@ -499,7 +498,7 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
               htmlFor="packet-count"
               className="mb-1.5 block text-sm font-medium text-foreground"
             >
-              Number of Packets
+              પેકેટની સંખ્યા
             </Label>
             <Input
               id="packet-count"
@@ -518,7 +517,7 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
             onClick={() => setShowResults(true)}
           >
             <Calculator className="h-5 w-5" />
-            Calculate
+            પરિણામ
           </Button>
         </div>
       </div>
@@ -534,13 +533,12 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
               </div>
               <div>
                 <h3 className="font-serif text-lg text-foreground">
-                  Calculation Results
+                  ગણતરીનું પરિણામ
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  Total requirements for{" "}
                   <span className="font-semibold text-primary">
-                    {packetCount} packet{packetCount !== 1 ? "s" : ""}
-                  </span>
+                    {packetCount} પેકેટ
+                  </span> માટે કુલ જરૂરિયાત
                 </p>
               </div>
             </div>
@@ -581,7 +579,7 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
 
                     const breakdownHtml = `
                       <div class="section">
-                        <h2>Recipe-wise Breakdown</h2>
+                        <h2>વાનગી મુજબ વિગત</h2>
                         ${recipeBreakdowns.filter(Boolean).map(b => {
                           if (!b) return '';
                           const recipe = b.recipe
@@ -590,10 +588,10 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
                             <table>
                               <thead>
                                 <tr>
-                                  <th>Ingredient</th>
-                                  <th>Per Packet</th>
-                                  <th>Total</th>
-                                  ${recipe.packetYield ? `<th>By Yield (${escapeHtml(String(recipe.packetYield))})</th>` : ''}
+                                  <th>સામગ્રી</th>
+                                  <th>દરેક પેકેટ દીઠ</th>
+                                  <th>કુલ</th>
+                                  ${recipe.packetYield ? `<th>યીલ્ડ મુજબ (${escapeHtml(String(recipe.packetYield))})</th>` : ''}
                                 </tr>
                               </thead>
                               <tbody>
@@ -616,11 +614,11 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
 
                     const combinedHtml = `
                       <div class="section">
-                        <h2>Combined Ingredient List</h2>
-                        <p class="muted">All ingredients combined across recipes for ${packetCount} packet${packetCount !== 1 ? 's' : ''}</p>
+                        <h2>કુલ સામગ્રીની યાદી</h2>
+                        <p class="muted">${packetCount} પેકેટ માટે બધી જ વાનગીઓની કુલ સામગ્રી</p>
                         <table>
                           <thead>
-                            <tr><th>Ingredient</th><th style="text-align:right">Total Needed</th><th>From Recipes</th></tr>
+                            <tr><th>સામગ્રી</th><th style="text-align:right">કુલ જરૂરિયાત</th><th>વાનગી મુજબ વિગત</th></tr>
                           </thead>
                           <tbody>
                             ${aggregatedIngredients.map(agg => `
@@ -635,7 +633,7 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
                       </div>
                     `
 
-                    const doc = `<!doctype html><html><head><meta charset="utf-8"><title>Packet Breakdown</title><style>${style}</style></head><body><h1>Packet Breakdown</h1>${breakdownHtml}${combinedHtml}<script>setTimeout(()=>{window.print();},250);function closeWindow(){window.close();}</script></body></html>`
+                    const doc = `<!doctype html><html><head><meta charset="utf-8"><title>પેકેટની વિગત</title><style>${style}</style></head><body><h1>પેકેટની વિગત</h1>${breakdownHtml}${combinedHtml}<script>setTimeout(()=>{window.print();},250);function closeWindow(){window.close();}</script></body></html>`
 
                     // helper to escape HTML
                     function escapeHtml(s: any){
@@ -653,7 +651,7 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
                   }}
                 >
                   <Package className="h-4 w-4" />
-                  Download PDF
+                  PDF ડાઉનલોડ કરો
                 </Button>
               </div>
             </div>
@@ -662,7 +660,7 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
           {/* Per-recipe breakdown */}
           <div className="space-y-4">
             <h4 className="font-serif text-lg text-foreground">
-              Recipe-wise Breakdown
+              વાનગી મુજબ વિગત
             </h4>
             {recipeBreakdowns.filter(Boolean).map((breakdown) => {
               const { recipe, perPacketQuantity, totalQuantity, ingredients } = breakdown as {
@@ -693,10 +691,10 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
                         {recipe.name}
                       </h5>
                       <p className="text-xs text-muted-foreground">
-                        {perPacketQuantity} {recipe.baseUnit} per packet
-                        {" x "}{packetCount} packets ={" "}
+                        દરેક પેકેટ દીઠ {perPacketQuantity} {recipe.baseUnit}
+                        {" x "}{packetCount} પેકેટો ={" "}
                         <span className="font-semibold text-primary">
-                          {formatSmart(totalQuantity, recipe.baseUnit)} total
+                          {formatSmart(totalQuantity, recipe.baseUnit)} કુલ
                         </span>
                       </p>
                     </div>
@@ -706,17 +704,17 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-border bg-muted/20 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          <th className="px-5 py-2.5 text-left">Ingredient</th>
-                          <th className="px-5 py-2.5 text-right">Per Packet</th>
+                          <th className="px-5 py-2.5 text-left">સામગ્રી</th>
+                          <th className="px-5 py-2.5 text-right">પેકેટ દીઠ</th>
                           <th className="px-3 py-2.5 text-center">
                             <span className="sr-only">arrow</span>
                           </th>
                           <th className="px-5 py-2.5 text-right">
-                            Total ({packetCount} pkt{packetCount !== 1 ? "s" : ""})
+                            કુલ ({packetCount} પેકેટ)
                           </th>
                           {recipe.packetYield && (
                             <th className="px-5 py-2.5 text-right">
-                              By Yield ({recipe.packetYield})
+                              યીલ્ડ મુજબ ({recipe.packetYield})
                             </th>
                           )}
                         </tr>
@@ -760,13 +758,11 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
               <div className="flex items-center gap-2">
                 <Package className="h-4 w-4 text-primary" />
                 <h4 className="font-serif text-lg text-foreground">
-                  Combined Ingredient List
+                  કુલ સામગ્રીની યાદી
                 </h4>
               </div>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                All ingredients combined across recipes for {packetCount}{" "}
-                packet{packetCount !== 1 ? "s" : ""}
-                {" \u2014 large amounts auto-converted to bigger units"}
+                {packetCount} પેકેટ માટે બધી જ વાનગીઓની ભેગી કરેલી કુલ સામગ્રી
               </p>
             </div>
 
@@ -801,9 +797,9 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border bg-muted/20 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    <th className="px-5 py-2.5 text-left">Ingredient</th>
-                    <th className="px-5 py-2.5 text-right">Total Needed</th>
-                    <th className="px-5 py-2.5 text-left">From Recipes</th>
+                    <th className="px-5 py-2.5 text-left">સામગ્રી</th>
+                    <th className="px-5 py-2.5 text-right">કુલ જરૂરિયાત</th>
+                    <th className="px-5 py-2.5 text-left">વાનગી મુજબ વિગત</th>
                   </tr>
                 </thead>
                 <tbody>

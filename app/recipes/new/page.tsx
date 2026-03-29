@@ -10,18 +10,18 @@ export default function NewRecipePage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="mb-6 font-serif text-2xl">Add New Recipe</h1>
+      <h1 className="mb-6 font-serif text-2xl">નવી વાનગી ઉમેરો</h1>
       <RecipeForm
         onAdd={(recipe) => {
           // notify main page to reload recipes
           try { window.dispatchEvent(new Event('recipesSaved')) } catch (e) {}
-          toast({ title: 'Saved', description: 'Recipe saved' })
+          toast({ title: 'સેવ સફળ', description: 'રેસીપી સફળતાપૂર્વક પૂર્વક સેવ કરી છે' })
           if (typeof window !== 'undefined') localStorage.setItem("recipeScaleActiveTab", "recipes")
-          router.push('/')
+          router.push('/?tab=recipes')
         }}
         onClose={() => {
           if (typeof window !== 'undefined') localStorage.setItem("recipeScaleActiveTab", "recipes")
-          router.push('/')
+          router.push('/?tab=recipes')
         }}
       />
     </div>

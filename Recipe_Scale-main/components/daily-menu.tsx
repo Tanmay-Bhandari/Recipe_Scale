@@ -124,7 +124,7 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
 
   const LUNCH_DEFAULT_ITEMS = [
     "ઠાકોરજી મિષ્ટાન્ન",
-    "જનરલ મિષ્ટાન્ન",
+    "જનરલ મિષ્ટા",
     "ઠાકોરજી રોટલી",
     "જનરલ રોટલી",
     "ઠાકોરજી તુવેરદાળ",
@@ -685,11 +685,10 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
             key={mealType}
             type="button"
             onClick={() => setActiveMeal(mealType)}
-            className={`w-full h-12 text-base font-bold rounded-xl border transition-all ${
-              activeMeal === mealType
-                ? "bg-primary border-primary text-primary-foreground shadow-md scale-[1.02]"
-                : "border-border bg-background text-muted-foreground hover:bg-primary/5 hover:text-foreground active:scale-95"
-            }`}
+            className={`w-full h-12 text-base font-bold rounded-xl border transition-all ${activeMeal === mealType
+              ? "bg-primary border-primary text-primary-foreground shadow-md scale-[1.02]"
+              : "border-border bg-background text-muted-foreground hover:bg-primary/5 hover:text-foreground active:scale-95"
+              }`}
           >
             {MEAL_TITLES[mealType]}
           </button>
@@ -828,12 +827,12 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
                         {meal.items.map((it) => (
                           <tr key={it.id} className="hover:bg-muted/10 transition-colors">
                             <td className="p-3 align-top">
-                               <AutoResizeTextarea
-                                 value={it.name}
-                                 onChange={(e) => updateItem(mealType, it.id, { name: e.target.value })}
-                                 placeholder="વિગત (દા.ત. નાસ્તો - ૧)"
-                                 className="mb-1 border-none bg-transparent px-0 text-base font-semibold focus-visible:ring-0 shadow-none text-foreground placeholder:text-muted-foreground/50 min-h-0 py-0"
-                               />
+                              <AutoResizeTextarea
+                                value={it.name}
+                                onChange={(e) => updateItem(mealType, it.id, { name: e.target.value })}
+                                placeholder="વિગત (દા.ત. નાસ્તો - ૧)"
+                                className="mb-1 border-none bg-transparent px-0 text-base font-semibold focus-visible:ring-0 shadow-none text-foreground placeholder:text-muted-foreground/50 min-h-0 py-0"
+                              />
                               <RecipeSuggestionInput
                                 value={it.value}
                                 onChange={(v) => updateItem(mealType, it.id, { value: v })}
@@ -937,27 +936,27 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
                         <tr className="bg-muted/5">
                           <td className="p-3 align-top">
                             <AutoResizeTextarea
-                               value={breakfastNewName}
-                               onChange={(e) => setBreakfastNewName(e.target.value)}
-                               placeholder="વિગત (દા.ત. નાસ્તો - ૧)"
-                               className="mb-1 border-none bg-transparent px-0 text-base font-semibold focus-visible:ring-0 shadow-none text-foreground placeholder:text-muted-foreground/50 min-h-0 py-0"
-                             />
+                              value={breakfastNewName}
+                              onChange={(e) => setBreakfastNewName(e.target.value)}
+                              placeholder="વિગત (દા.ત. નાસ્તો - ૧)"
+                              className="mb-1 border-none bg-transparent px-0 text-base font-semibold focus-visible:ring-0 shadow-none text-foreground placeholder:text-muted-foreground/50 min-h-0 py-0"
+                            />
                             <RecipeSuggestionInput
-                               value={breakfastNewValue}
-                               onChange={setBreakfastNewValue}
-                               recipes={recipes}
-                               placeholder="નવી વાનગી..."
-                               className="bg-background text-sm"
-                             />
+                              value={breakfastNewValue}
+                              onChange={setBreakfastNewValue}
+                              recipes={recipes}
+                              placeholder="નવી વાનગી..."
+                              className="bg-background text-sm"
+                            />
                           </td>
                           <td className="p-3 align-top md:border-l md:border-border md:pl-3">
                             <div className="h-8 mb-1"></div>
                             <AutoResizeTextarea
-                               value={breakfastNewItemName}
-                               onChange={(e) => setBreakfastNewItemName(e.target.value)}
-                               placeholder="વસ્તુનું નામ લખો..."
-                               className="bg-background text-sm min-h-0 py-2"
-                             />
+                              value={breakfastNewItemName}
+                              onChange={(e) => setBreakfastNewItemName(e.target.value)}
+                              placeholder="વસ્તુનું નામ લખો..."
+                              className="bg-background text-sm min-h-0 py-2"
+                            />
                           </td>
                           <td className="p-3 align-top md:border-l md:border-border md:pl-3">
                             <div className="h-8 mb-1"></div>
@@ -1230,59 +1229,59 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
                                 </select>
                               </div>
                             </td>
-                             <td className="p-3 align-top md:border-l md:border-orange-100/50 md:pl-3 dark:md:border-orange-900/20">
-                                <div className="h-8 mb-1"></div>
-                                <div className="flex gap-1 items-center">
-                                  <Input
-                                    type="number"
-                                    step="any"
-                                    min="0"
-                                    placeholder="0"
-                                    value={parseNote(thakorjiExtraItemForm[mealType as "lunch" | "dinner"].note).value || ""}
-                                    onChange={(e) => {
-                                      const { unit } = parseNote(thakorjiExtraItemForm[mealType as "lunch" | "dinner"].note);
-                                      setThakorjiExtraItemForm((prev) => ({
-                                        ...prev,
-                                        [mealType]: {
-                                          ...prev[mealType as "lunch" | "dinner"],
-                                          note: formatNote(parseFloat(e.target.value || "0"), unit)
-                                        },
-                                      }));
-                                    }}
-                                    className="h-9 w-16 bg-background px-1 text-center border-orange-100/50 dark:border-orange-900/30"
-                                  />
-                                  <select
-                                    value={parseNote(thakorjiExtraItemForm[mealType as "lunch" | "dinner"].note).unit}
-                                    onChange={(e) => {
-                                      const { value } = parseNote(thakorjiExtraItemForm[mealType as "lunch" | "dinner"].note);
-                                      setThakorjiExtraItemForm((prev) => ({
-                                        ...prev,
-                                        [mealType]: {
-                                          ...prev[mealType as "lunch" | "dinner"],
-                                          note: formatNote(value, e.target.value)
-                                        },
-                                      }));
-                                    }}
-                                    className="h-9 flex-1 rounded-md border border-orange-100/50 bg-background px-1 text-xs dark:border-orange-900/30"
-                                  >
-                                    {VAD_GHAT_OPTIONS.map((opt) => (
-                                      <option key={opt} value={opt}>
-                                        {opt || "પસંદ કરો..."}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                              </td>
-                              <td className="p-3 align-top md:border-l md:border-orange-100/50 md:pl-2 dark:md:border-orange-900/20 text-right">
-                                <div className="h-8 mb-1"></div>
-                                <Button
-                                  type="button"
-                                  onClick={() => addThakorjiItem(mealType as "lunch" | "dinner")}
-                                  className="h-9 w-9 p-0 bg-orange-600 text-white hover:bg-orange-700 shadow-sm"
+                            <td className="p-3 align-top md:border-l md:border-orange-100/50 md:pl-3 dark:md:border-orange-900/20">
+                              <div className="h-8 mb-1"></div>
+                              <div className="flex gap-1 items-center">
+                                <Input
+                                  type="number"
+                                  step="any"
+                                  min="0"
+                                  placeholder="0"
+                                  value={parseNote(thakorjiExtraItemForm[mealType as "lunch" | "dinner"].note).value || ""}
+                                  onChange={(e) => {
+                                    const { unit } = parseNote(thakorjiExtraItemForm[mealType as "lunch" | "dinner"].note);
+                                    setThakorjiExtraItemForm((prev) => ({
+                                      ...prev,
+                                      [mealType]: {
+                                        ...prev[mealType as "lunch" | "dinner"],
+                                        note: formatNote(parseFloat(e.target.value || "0"), unit)
+                                      },
+                                    }));
+                                  }}
+                                  className="h-9 w-16 bg-background px-1 text-center border-orange-100/50 dark:border-orange-900/30"
+                                />
+                                <select
+                                  value={parseNote(thakorjiExtraItemForm[mealType as "lunch" | "dinner"].note).unit}
+                                  onChange={(e) => {
+                                    const { value } = parseNote(thakorjiExtraItemForm[mealType as "lunch" | "dinner"].note);
+                                    setThakorjiExtraItemForm((prev) => ({
+                                      ...prev,
+                                      [mealType]: {
+                                        ...prev[mealType as "lunch" | "dinner"],
+                                        note: formatNote(value, e.target.value)
+                                      },
+                                    }));
+                                  }}
+                                  className="h-9 flex-1 rounded-md border border-orange-100/50 bg-background px-1 text-xs dark:border-orange-900/30"
                                 >
-                                  +
-                                </Button>
-                              </td>
+                                  {VAD_GHAT_OPTIONS.map((opt) => (
+                                    <option key={opt} value={opt}>
+                                      {opt || "પસંદ કરો..."}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </td>
+                            <td className="p-3 align-top md:border-l md:border-orange-100/50 md:pl-2 dark:md:border-orange-900/20 text-right">
+                              <div className="h-8 mb-1"></div>
+                              <Button
+                                type="button"
+                                onClick={() => addThakorjiItem(mealType as "lunch" | "dinner")}
+                                className="h-9 w-9 p-0 bg-orange-600 text-white hover:bg-orange-700 shadow-sm"
+                              >
+                                +
+                              </Button>
+                            </td>
                           </tr>
                         </tbody>
                       </table>
@@ -1359,31 +1358,31 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
                                   </select>
                                 </div>
                               </td>
-                               <td className="p-3 align-top md:border-l md:border-blue-200 md:pl-3 dark:md:border-blue-900/30">
-                                 <div className="h-8 mb-1"></div>
-                                 <div className="flex gap-1 items-center">
-                                   <Input
-                                     type="number"
-                                     step="any"
-                                     min="0"
-                                     placeholder="0"
-                                     value={parseNote(it.note || "").value || ""}
-                                     onChange={(e) => updateNoteValue(it.id, mealType, e.target.value)}
-                                     className="h-9 w-16 bg-background px-1 text-center border-blue-200 dark:border-blue-900/40"
-                                   />
-                                   <select
-                                     value={parseNote(it.note || "").unit}
-                                     onChange={(e) => updateNoteUnit(it.id, mealType, e.target.value)}
-                                     className="h-9 flex-1 rounded-md border border-blue-200 bg-background px-1 text-xs dark:border-blue-900/40"
-                                   >
-                                     {VAD_GHAT_OPTIONS.map((opt) => (
-                                       <option key={opt} value={opt}>
-                                         {opt || "પસંદ કરો..."}
-                                       </option>
-                                     ))}
-                                   </select>
-                                 </div>
-                               </td>
+                              <td className="p-3 align-top md:border-l md:border-blue-200 md:pl-3 dark:md:border-blue-900/30">
+                                <div className="h-8 mb-1"></div>
+                                <div className="flex gap-1 items-center">
+                                  <Input
+                                    type="number"
+                                    step="any"
+                                    min="0"
+                                    placeholder="0"
+                                    value={parseNote(it.note || "").value || ""}
+                                    onChange={(e) => updateNoteValue(it.id, mealType, e.target.value)}
+                                    className="h-9 w-16 bg-background px-1 text-center border-blue-200 dark:border-blue-900/40"
+                                  />
+                                  <select
+                                    value={parseNote(it.note || "").unit}
+                                    onChange={(e) => updateNoteUnit(it.id, mealType, e.target.value)}
+                                    className="h-9 flex-1 rounded-md border border-blue-200 bg-background px-1 text-xs dark:border-blue-900/40"
+                                  >
+                                    {VAD_GHAT_OPTIONS.map((opt) => (
+                                      <option key={opt} value={opt}>
+                                        {opt || "પસંદ કરો..."}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </td>
                               <td className="p-3 align-top md:border-l md:border-blue-200 md:pl-2 dark:md:border-blue-900/30">
                                 <div className="h-8 mb-1"></div>
                                 <div className="flex items-center gap-2">
@@ -1478,59 +1477,59 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
                                 </select>
                               </div>
                             </td>
-                             <td className="p-3 align-top md:border-l md:border-blue-100/50 md:pl-3 dark:md:border-blue-900/20">
-                                <div className="h-8 mb-1"></div>
-                                <div className="flex gap-1 items-center">
-                                  <Input
-                                    type="number"
-                                    step="any"
-                                    min="0"
-                                    placeholder="0"
-                                    value={parseNote(extraItemForm[mealType as "lunch" | "dinner"].note).value || ""}
-                                    onChange={(e) => {
-                                      const { unit } = parseNote(extraItemForm[mealType as "lunch" | "dinner"].note);
-                                      setExtraItemForm((prev) => ({
-                                        ...prev,
-                                        [mealType]: {
-                                          ...prev[mealType as "lunch" | "dinner"],
-                                          note: formatNote(parseFloat(e.target.value || "0"), unit)
-                                        },
-                                      }));
-                                    }}
-                                    className="h-9 w-16 bg-background px-1 text-center border-blue-100/50 dark:border-blue-900/30"
-                                  />
-                                  <select
-                                    value={parseNote(extraItemForm[mealType as "lunch" | "dinner"].note).unit}
-                                    onChange={(e) => {
-                                      const { value } = parseNote(extraItemForm[mealType as "lunch" | "dinner"].note);
-                                      setExtraItemForm((prev) => ({
-                                        ...prev,
-                                        [mealType]: {
-                                          ...prev[mealType as "lunch" | "dinner"],
-                                          note: formatNote(value, e.target.value)
-                                        },
-                                      }));
-                                    }}
-                                    className="h-9 flex-1 rounded-md border border-blue-100/50 bg-background px-1 text-xs dark:border-blue-900/30"
-                                  >
-                                    {VAD_GHAT_OPTIONS.map((opt) => (
-                                      <option key={opt} value={opt}>
-                                        {opt || "પસંદ કરો..."}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                              </td>
-                              <td className="p-3 align-top md:border-l md:border-blue-100/50 md:pl-2 dark:md:border-blue-900/20 text-right">
-                                <div className="h-8 mb-1"></div>
-                                <Button
-                                  type="button"
-                                  onClick={() => addExtraItem(mealType as "lunch" | "dinner")}
-                                  className="h-9 w-9 p-0 bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
+                            <td className="p-3 align-top md:border-l md:border-blue-100/50 md:pl-3 dark:md:border-blue-900/20">
+                              <div className="h-8 mb-1"></div>
+                              <div className="flex gap-1 items-center">
+                                <Input
+                                  type="number"
+                                  step="any"
+                                  min="0"
+                                  placeholder="0"
+                                  value={parseNote(extraItemForm[mealType as "lunch" | "dinner"].note).value || ""}
+                                  onChange={(e) => {
+                                    const { unit } = parseNote(extraItemForm[mealType as "lunch" | "dinner"].note);
+                                    setExtraItemForm((prev) => ({
+                                      ...prev,
+                                      [mealType]: {
+                                        ...prev[mealType as "lunch" | "dinner"],
+                                        note: formatNote(parseFloat(e.target.value || "0"), unit)
+                                      },
+                                    }));
+                                  }}
+                                  className="h-9 w-16 bg-background px-1 text-center border-blue-100/50 dark:border-blue-900/30"
+                                />
+                                <select
+                                  value={parseNote(extraItemForm[mealType as "lunch" | "dinner"].note).unit}
+                                  onChange={(e) => {
+                                    const { value } = parseNote(extraItemForm[mealType as "lunch" | "dinner"].note);
+                                    setExtraItemForm((prev) => ({
+                                      ...prev,
+                                      [mealType]: {
+                                        ...prev[mealType as "lunch" | "dinner"],
+                                        note: formatNote(value, e.target.value)
+                                      },
+                                    }));
+                                  }}
+                                  className="h-9 flex-1 rounded-md border border-blue-100/50 bg-background px-1 text-xs dark:border-blue-900/30"
                                 >
-                                  +
-                                </Button>
-                              </td>
+                                  {VAD_GHAT_OPTIONS.map((opt) => (
+                                    <option key={opt} value={opt}>
+                                      {opt || "પસંદ કરો..."}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </td>
+                            <td className="p-3 align-top md:border-l md:border-blue-100/50 md:pl-2 dark:md:border-blue-900/20 text-right">
+                              <div className="h-8 mb-1"></div>
+                              <Button
+                                type="button"
+                                onClick={() => addExtraItem(mealType as "lunch" | "dinner")}
+                                className="h-9 w-9 p-0 bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
+                              >
+                                +
+                              </Button>
+                            </td>
                           </tr>
                         </tbody>
                       </table>

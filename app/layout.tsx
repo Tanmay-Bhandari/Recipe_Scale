@@ -14,11 +14,15 @@ const dmSerif = DM_Serif_Display({
   variable: '--font-dm-serif',
 })
 
+export const viewport: Viewport = {
+  width: '1280',
+  initialScale: 1,
+}
+
 export const metadata: Metadata = {
   title: 'RecipeScale - Scale Your Recipes Perfectly',
   description:
     'Add your recipes, define ingredients, and instantly scale quantities for any batch size. Perfect for bakers and chefs.',
-  viewport: { width: 'device-width', initialScale: 1 },
   themeColor: '#d4602a',
 }
 

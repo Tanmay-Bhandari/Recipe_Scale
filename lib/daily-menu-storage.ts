@@ -1,3 +1,6 @@
+import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { initClientFirestore } from './firebaseClient'
+
 export type MealType = "breakfast" | "lunch" | "dinner"
 
 export type DailyMenuItem = {
@@ -6,6 +9,9 @@ export type DailyMenuItem = {
   quantity: number
   unit: string
   value: string
+  adjustment?: string
+  adjustmentUnit?: string
+  label?: string
 }
 
 export type DailyMenuMeal = {
@@ -68,5 +74,45 @@ export function saveDayMenu(dayKey: string, state: DailyMenuState): void {
   const store = loadDailyMenuStore()
   store.days[dayKey] = state
   localStorage.setItem(DAILY_MENU_STORAGE_KEY, JSON.stringify(store))
+  window.dispatchEvent(new CustomEvent("dailyMenuSaved"))
 }
 
+export async function saveDayMenuToFirestore(dayKey: string, state: DailyMenuState): Promise<void> {
+  try {
+    const db = initClientFirestore()
+    const docRef = doc(db, "daily-menus", dayKey)
+    
+    // Firestore doesn't like 'undefined' values.
+    // Convert undefined to null or just strip them.
+    const cleanState = JSON.parse(JSON.stringify(state))
+    
+    await setDoc(docRef, cleanState)
+  } catch (error: any) {
+    console.error("Error saving to Firestore:", error)
+    if (error.code === 'permission-denied') {
+      throw new Error("Permission denied")
+    }
+    throw new Error("Cloud sync failed")
+  }
+}
+
+export async function loadDayMenuFromFirestore(dayKey: string): Promise<DailyMenuState | null> {
+  try {
+    const db = initClientFirestore()
+    const docRef = doc(db, "daily-menus", dayKey)
+    const docSnap = await getDoc(docRef)
+    
+    if (docSnap.exists()) {
+      return docSnap.data() as DailyMenuState
+    }
+    return null
+  } catch (error: any) {
+    // Handle the "client is offline" error gracefully
+    if (error.code === 'unavailable' || error.message?.includes('offline')) {
+      console.warn("Firestore is offline or currently unavailable, using local cache.")
+      return null
+    }
+    console.error("Error loading from Firestore:", error)
+    return null
+  }
+}

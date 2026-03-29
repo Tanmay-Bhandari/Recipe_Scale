@@ -56,13 +56,12 @@ export function RecipeCard({ recipe, onDelete, onEdit, isDimmed, onFocusToggle }
             </h3>
             <div className="text-sm text-muted-foreground whitespace-normal">
               <p>
-                Base: {recipe.baseQuantity} {recipe.baseUnit}
+                બેઝ: {recipe.baseQuantity} {recipe.baseUnit}
                 <span className="mx-1.5 text-border">|</span>
-                {recipe.ingredients.length} ingredient
-                {recipe.ingredients.length !== 1 ? "s" : ""}
+                {recipe.ingredients.length} સામગ્રી
               </p>
               {recipe.packetYield ? (
-                <p className="mt-0.5">Total Food Packets: {recipe.packetYield}</p>
+                <p className="mt-0.5">કુલ ફૂડ પેકેટ: {recipe.packetYield}</p>
               ) : null}
             </div>
           </div>
@@ -76,7 +75,7 @@ export function RecipeCard({ recipe, onDelete, onEdit, isDimmed, onFocusToggle }
             className="gap-1.5 text-sm text-muted-foreground hover:text-foreground"
           >
             <Scale className="h-4 w-4" />
-            <span className="hidden sm:inline">Scale</span>
+            <span className="hidden sm:inline">પરિણામ</span>
             {expanded ? (
               <ChevronUp className="h-3.5 w-3.5" />
             ) : (
@@ -97,7 +96,7 @@ export function RecipeCard({ recipe, onDelete, onEdit, isDimmed, onFocusToggle }
             size="icon"
             onClick={(e) => {
               e.stopPropagation()
-              if (confirm(`Delete recipe "${recipe.name}"? This cannot be undone.`)) {
+              if (confirm(`શું તમે આ "${recipe.name}" રેસીપી ડીલીટ કરવા માંગો છો? આ ફેરફાર પાછો ખેંચી શકાશે નહીં.`)) {
               onDelete(recipe.id)
               }
             }}

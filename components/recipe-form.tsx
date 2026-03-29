@@ -1,13 +1,14 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useMemo } from "react"
 import { v4 as uuidv4 } from "uuid"
-import { Plus, Trash2, X, CakeSlice, ImagePlus, Loader2 } from "lucide-react"
+import { Plus, Trash2, X, CakeSlice, ImagePlus, Loader2, ChefHat } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea"
+import { RecipeSuggestionInput } from "./recipe-suggestion-input"
+import { COMMON_SUGGESTIONS } from "@/lib/suggestions"
 import { Label } from "@/components/ui/label"
 import { IngredientInput } from "@/components/ingredient-input"
 import {
@@ -30,6 +31,24 @@ interface RecipeFormProps {
 
 export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
   const isEditing = !!editingRecipe
+  const [recipes, setRecipes] = useState<Recipe[]>([])
+  const allSuggestions = useMemo(() => {
+    const fromRecipes = recipes.map(r => ({ name: r.name }))
+    const fromCommon = COMMON_SUGGESTIONS.map(name => ({ name }))
+    const combined = [...fromRecipes, ...fromCommon]
+    const unique = Array.from(new Map(combined.map(s => [s.name, s])).values())
+    return unique.sort((a, b) => a.name.localeCompare(b.name, 'gu'))
+  }, [recipes])
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("recipes")
+        if (raw) setRecipes(JSON.parse(raw))
+      } catch (e) {}
+    }
+  }, [])
+
   const [name, setName] = useState(editingRecipe?.name ?? "")
   const [baseQuantity, setBaseQuantity] = useState(
     editingRecipe ? String(editingRecipe.baseQuantity) : ""
@@ -212,7 +231,7 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
 
     async function uploadAndSave() {
       setIsSaving(true)
-      const t = toast({ title: 'Saving recipe', description: 'Uploading image and saving recipe...' })
+      const t = toast({ title: 'રેસીપી સેવ થઈ રહી છે', description: 'ફોટો અપલોડ અને રેસીપી સેવ થઈ રહી છે...' })
       let imageUrl: string | null | undefined = recipe.image
       let imagePath: string | null | undefined = (editingRecipe as any)?.imagePath
 
@@ -281,7 +300,7 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
         window.dispatchEvent(new Event("recipesSaved"))
         setTimeout(() => loadPreviousIngredients(), 100)
 
-        t.update({ id: t.id, title: 'Saved', description: 'Recipe saved successfully', open: true })
+        t.update({ id: t.id, title: 'સેવ સફળ!', description: 'રેસીપી સફળતાપૂર્વક પૂર્વક સેવ કરી છે', open: true })
       } catch (err: any) {
         console.warn('Save failed, falling back to localStorage:', err?.message || String(err))
         // Fallback: save locally so the UI still updates when backend is unavailable
@@ -298,9 +317,9 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
           localStorage.setItem('recipes', JSON.stringify(arr))
           onAdd(toSave)
           window.dispatchEvent(new Event('recipesSaved'))
-          t.update({ id: t.id, title: 'Saved Locally', description: 'Backend unavailable — saved to browser storage', open: true })
+          t.update({ id: t.id, title: 'લોકલી સેવ સફળ!', description: 'બેકએન્ડ ઉપલબ્ધ નથી — બ્રાઉઝર સ્ટોરેજમાં સેવ કર્યું છે', open: true })
         } catch (e) {
-          t.update({ id: t.id, title: 'Error', description: err?.message || 'Failed to save recipe', open: true })
+          t.update({ id: t.id, title: 'ભૂલ', description: err?.message || 'રેસીપી સેવ કરવામાં નિષ્ફળ', open: true })
         }
       } finally {
         setIsSaving(false)
@@ -318,7 +337,7 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
             <CakeSlice className="h-4 w-4 text-primary" />
           </div>
           <h2 className="font-serif text-xl text-foreground">
-            {isEditing ? "Edit Recipe" : "Add New Recipe"}
+            {isEditing ? "રેસીપી એડિટ કરો" : "નવી વાનગી ઉમેરો"}
           </h2>
         </div>
         <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close form">
@@ -330,7 +349,7 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
         {/* Image Upload */}
         <div>
           <Label className="mb-1.5 block text-sm font-medium text-foreground">
-            Recipe Photo
+            વાનગીનો ફોટો
           </Label>
           <div className="flex items-start gap-4">
             {imagePreview ? (
@@ -357,7 +376,7 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
                 className="flex h-40 w-40 md:h-48 md:w-48 shrink-0 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-background text-muted-foreground transition-colors hover:border-primary hover:text-primary"
               >
                 <ImagePlus className="h-8 w-8" />
-                <span className="text-xs font-medium">Add Photo</span>
+                <span className="text-xs font-medium">ફોટો ઉમેરો</span>
               </button>
             )}
             <input
@@ -369,7 +388,7 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
               aria-label="Upload recipe photo"
             />
             <p className="pt-1 text-xs text-muted-foreground leading-relaxed">
-              Upload a photo of your recipe. JPG, PNG or WebP accepted. This is optional but helps you visually identify recipes.
+              તમારી રેસીપીનો ફોટો અપલોડ કરો. JPG, PNG અથવા WebP સ્વીકાર્ય છે. આ વૈકલ્પિક છે પણ રેસીપી ઓળખવામાં મદદ કરે છે.
             </p>
           </div>
         </div>
@@ -378,27 +397,28 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
         <div className="grid gap-4 md:grid-cols-4">
           <div className="md:col-span-1">
             <Label htmlFor="recipe-name" className="mb-1.5 block text-sm font-medium text-foreground">
-              Recipe Name
+              વાનગીનું નામ
             </Label>
-            <AutoResizeTextarea
+            <RecipeSuggestionInput
               id="recipe-name"
-              placeholder="e.g. Chocolate Cake"
+              placeholder="દા.ત. ચોકલેટ કેક"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(v) => setName(v)}
+              recipes={allSuggestions}
               className="bg-background"
               required
             />
           </div>
           <div>
             <Label htmlFor="base-qty" className="mb-1.5 block text-sm font-medium text-foreground">
-              Base Quantity
+              બેઝ જથ્થો
             </Label>
             <Input
               id="base-qty"
               type="number"
               step="any"
               min="0.01"
-              placeholder="e.g. 10"
+              placeholder="દા.ત. 10"
               value={baseQuantity}
               onChange={(e) => setBaseQuantity(e.target.value)}
               className="bg-background"
@@ -407,7 +427,7 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
           </div>
           <div>
             <Label htmlFor="base-unit" className="mb-1.5 block text-sm font-medium text-foreground">
-              Unit
+              યુનિટ
             </Label>
             <Select value={baseUnit} onValueChange={setBaseUnit}>
               <SelectTrigger id="base-unit" className="bg-background">
@@ -424,14 +444,14 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
           </div>
           <div>
             <Label htmlFor="packet-yield" className="mb-1.5 block text-sm font-medium text-foreground">
-              Total Food Packets
+              કુલ ફૂડ પેકેટ
             </Label>
             <Input
               id="packet-yield"
               type="number"
               step="1"
               min="1"
-              placeholder="e.g. 100"
+              placeholder="દા.ત. 100"
               value={packetYield}
               onChange={(e) => setPacketYield(e.target.value)}
               className="bg-background"
@@ -443,7 +463,7 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
         <div>
           <div className="mb-3 flex items-center justify-between">
             <Label className="text-sm font-medium text-foreground">
-              Ingredients
+              સામગ્રી
             </Label>
           </div>
 
@@ -457,19 +477,19 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
                 >
                   <div className="md:col-span-6">
                     <Label className="mb-1.5 block text-sm font-medium text-foreground">
-                      {i === 0 ? "Ingredient Name" : ""}
+                      {i === 0 ? "સામગ્રીનું નામ" : ""}
                     </Label>
                     <IngredientInput
                       value={ing.name}
                       onChange={(value) => updateIngredient(i, "name", value)}
-                      placeholder="e.g. Flour"
+                      placeholder="દા.ત. મેંદો"
                       className="bg-background"
                       previousIngredients={previousIngredientNames}
                     />
                   </div>
                   <div className="md:col-span-3">
                     <Label className="mb-1.5 block text-sm font-medium text-foreground">
-                      {i === 0 ? "Amount" : ""}
+                      {i === 0 ? "જથ્થો" : ""}
                     </Label>
                     <Input
                       type="number"
@@ -483,7 +503,7 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
                   </div>
                   <div className="md:col-span-2">
                     <Label className="mb-1.5 block text-sm font-medium text-foreground">
-                      {i === 0 ? "Unit" : ""}
+                      {i === 0 ? "યુનિટ" : ""}
                     </Label>
                     <Select
                       value={ing.unit}
@@ -522,29 +542,26 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
           {/* moved Add Ingredient button below all ingredient blocks — right-aligned */}
           <div className="mt-3 flex justify-end">
             <Button
-              type="button"
-              variant="default"
-              size="sm"
-              onClick={addIngredientRow}
-              className="gap-1.5 text-xs"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Add Ingredient
-            </Button>
+            type="button"
+            variant="outline"
+            onClick={addIngredientRow}
+            className="w-full gap-2 border-dashed"
+          >
+            <Plus className="h-4 w-4" />
+            સામગ્રી ઉમેરો
+          </Button>
           </div>
         </div>
 
         {/* Submit */}
         <div className="flex justify-end gap-3">
           <Button type="button" variant="outline" onClick={onClose}>
-            Cancel
+            રદ કરો
           </Button>
-          <Button type="submit" className="gap-2" disabled={isSaving}>
-            {isSaving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : null}
-            {isSaving ? (isEditing ? "Updating..." : "Saving...") : isEditing ? "Update Recipe" : "Save Recipe"}
-          </Button>
+          <Button type="submit" size="lg" className="w-full gap-2 text-lg shadow-lg" disabled={isSaving}>
+          <ChefHat className="h-5 w-5" />
+          {isSaving ? (isEditing ? "અપડેટ થઈ રહ્યું છે..." : "સેવ થઈ રહ્યું છે...") : isEditing ? "રેસીપી અપડેટ કરો" : "રેસીપી સેવ કરો"}
+        </Button>
         </div>
       </form>
     </div>

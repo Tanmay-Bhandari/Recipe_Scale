@@ -1,21 +1,25 @@
 "use client"
 
-import { CalendarDays, Trash2 } from "lucide-react"
+import { CalendarDays, Trash2, Plus, ChevronUp, ChevronDown } from "lucide-react"
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea"
 import { RecipeSuggestionInput } from "@/components/recipe-suggestion-input"
 import { Label } from "@/components/ui/label"
+import { COMMON_SUGGESTIONS } from "@/lib/suggestions"
 import type { Recipe } from "@/lib/types"
 import {
   getTodayKey,
   listSavedDays,
   loadDayMenu,
   saveDayMenu,
+  saveDayMenuToFirestore,
+  loadDayMenuFromFirestore,
   type DailyMenuItem,
   type DailyMenuMeal,
   type MealType,
+  type DailyMenuState,
 } from "@/lib/daily-menu-storage"
 import {
   Select,
@@ -78,73 +82,101 @@ interface DailyMenuProps {
 export function DailyMenu({ recipes }: DailyMenuProps) {
   const [selectedDay, setSelectedDay] = useState<string>(getTodayKey())
   const [savedDays, setSavedDays] = useState<string[]>([])
-  const [editingDay, setEditingDay] = useState<string | null>(getTodayKey())
-  const [breakfastNewName, setBreakfastNewName] = useState<string>("")
-  const [breakfastNewQuantity, setBreakfastNewQuantity] = useState<number>(0)
-  const [breakfastNewUnit, setBreakfastNewUnit] = useState<string>("kg")
-
-  const [extraItemForm, setExtraItemForm] = useState<
-    Record<"lunch" | "dinner", { name: string; quantity: number; unit: string }>
-  >({
-    lunch: { name: "", quantity: 0, unit: "kg" },
-    dinner: { name: "", quantity: 0, unit: "kg" },
-  })
+  const [editingDay, setEditingDay] = useState<string>("")
   const [dayOfWeek, setDayOfWeek] = useState("")
   const [tithiMonth, setTithiMonth] = useState("")
   const [tithiPhase, setTithiPhase] = useState("")
   const [tithiDay, setTithiDay] = useState("")
   const [saveNotice, setSaveNotice] = useState<string>("")
+  const [isSyncing, setIsSyncing] = useState(false)
   const saveNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const emptyItem = (): DailyMenuItem => ({
+  const emptyItem = (label?: string): DailyMenuItem => ({
     id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    name: "",
+    label: label || "",
+    quantity: 0,
+    unit: "kg",
+    value: "",
+    adjustment: "",
+  })
+
+  // Combine Firestore recipes with predefined common names
+  const allSuggestions = useMemo(() => {
+    const fromRecipes = recipes.map(r => ({ name: r.name }))
+    const fromCommon = COMMON_SUGGESTIONS.map(name => ({ name }))
+
+    // Also include ingredients from all recipes
+    const fromIngredients: Array<{ name: string }> = []
+    recipes.forEach(r => {
+      r.ingredients.forEach(ing => {
+        if (ing.name) fromIngredients.push({ name: ing.name })
+      })
+    })
+
+    // Combined list: Dish Names + Common Suggestions + Ingredient Names
+    const combined = [...fromRecipes, ...fromCommon, ...fromIngredients]
+
+    // Sort and remove duplicates
+    const unique = Array.from(new Map(combined.map(item => [item.name, item])).values())
+    return unique.sort((a, b) => a.name.localeCompare(b.name, 'gu'))
+  }, [recipes])
+
+  const namedItem = (label: string): DailyMenuItem => ({
+    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    label: label,
     name: "",
     quantity: 0,
     unit: "kg",
     value: "",
-  })
-
-  const namedItem = (name: string): DailyMenuItem => ({
-    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    name,
-    quantity: 0,
-    unit: "g",
-    value: "",
+    adjustment: "",
+    adjustmentUnit: "",
   })
 
   const LUNCH_DEFAULT_ITEMS = [
     "ઠાકોરજી મિષ્ટાન્ન",
-    "જનરલ મિષ્ટા",
+    "જેનરલ મિષ્ટાન્ન",
     "ઠાકોરજી રોટલી",
-    "જનરલ રોટલી",
+    "જેનરલ રોટલી",
     "ઠાકોરજી તુવેરદાળ",
-    "જનરલ તુવેરદાળ",
+    "જેનરલ તુવેરદાળ",
     "ઠાકોરજી ભાત",
-    "જનરલ ભાત",
+    "જેનરલ ભાત",
     "ઠાકોરજી શાક",
-    "જનરલ શાક",
+    "જેનરલ શાક",
     "ઠાકોરજી કઠોળ",
-    "જનરલ કઠોળ",
+    "જેનરલ કઠોળ",
     "ઠાકોરજી ફરસાણ",
-    "જનરલ ફરસાણ",
+    "ઠાકોરજી સલાડ",
+    "જેનરલ ફરસાણ",
     "સલાડ",
+  ]
+
+  const BREAKFAST_DEFAULT_ITEMS = [
+    "નાસ્તો - 1",
   ]
 
   const DINNER_DEFAULT_ITEMS = [
     "ઠાકોરજી શાક",
-    "જનરલ શાક",
+    "જેનરલ શાક",
     "ઠાકોરજી ભાખરી",
-    "જનરલ ભાખરી",
+    "જેનરલ ભાખરી",
     "ઠાકોરજી રોટલા",
-    "જનરલ રોટલા",
+    "જેનરલ રોટલા",
     "ઠાકોરજી ખીચડી",
-    "જનરલ ખીચડી",
+    "જેનરલ ખીચડી",
     "ઠાકોરજી કઢી",
-    "જનરલ કઢી",
+    "જેનરલ કઢી",
   ]
 
   const [meals, setMeals] = useState<Record<MealType, DailyMenuMeal>>({
-    breakfast: { calories: "", categories: "", maximum: "", totalOverride: "0", items: [] },
+    breakfast: {
+      calories: "",
+      categories: "",
+      maximum: "",
+      totalOverride: "0",
+      items: BREAKFAST_DEFAULT_ITEMS.map((name) => namedItem(name)),
+    },
     lunch: {
       calories: "",
       categories: "",
@@ -161,19 +193,73 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
     },
   })
 
+  const [selectedMeal, setSelectedMeal] = useState<MealType>("breakfast")
+
   useEffect(() => {
     const days = listSavedDays()
     setSavedDays(days)
+
     const current = loadDayMenu(selectedDay)
     if (current) {
-      setMeals(current.meals)
+      // Migrate existing items: if label is missing but name is present for Lunch/Dinner
+      // move name to label and clear name, as requested.
+      const migratedMeals = { ...current.meals }
+
+      const migrateItems = (items: DailyMenuItem[]) =>
+        items.map(it => {
+          if (!it.label && it.name) {
+            return { ...it, label: it.name, name: "" }
+          }
+          return it
+        })
+
+      migratedMeals.lunch = {
+        ...migratedMeals.lunch,
+        items: migrateItems(migratedMeals.lunch.items)
+      }
+      migratedMeals.dinner = {
+        ...migratedMeals.dinner,
+        items: migrateItems(migratedMeals.dinner.items)
+      }
+
+      setMeals(migratedMeals)
       setDayOfWeek(current.dayOfWeek ?? "")
       setTithiMonth(current.tithiMonth ?? "")
       setTithiPhase(current.tithiPhase ?? "")
       setTithiDay(current.tithiDay ?? "")
       setEditingDay(selectedDay)
+    } else {
+      // Reset to defaults if no data exists for selected day
+      setMeals({
+        breakfast: {
+          calories: "",
+          categories: "",
+          maximum: "",
+          totalOverride: "0",
+          items: BREAKFAST_DEFAULT_ITEMS.map((name) => namedItem(name)),
+        },
+        lunch: {
+          calories: "",
+          categories: "",
+          maximum: "",
+          totalOverride: "0",
+          items: LUNCH_DEFAULT_ITEMS.map((name) => namedItem(name)),
+        },
+        dinner: {
+          calories: "",
+          categories: "",
+          maximum: "",
+          totalOverride: "0",
+          items: DINNER_DEFAULT_ITEMS.map((name) => namedItem(name)),
+        },
+      })
+      setDayOfWeek("")
+      setTithiMonth("")
+      setTithiPhase("")
+      setTithiDay("")
+      setEditingDay(selectedDay)
     }
-  }, [])
+  }, [selectedDay])
 
   // Auto-calculate Day of Week when date changes
   useEffect(() => {
@@ -184,10 +270,10 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
     // getDay() returns 0 for Sunday, 1 for Monday, etc.
     // Our DAYS_OF_WEEK: 0-Som, 1-Mangal, 2-Budh, 3-Guru, 4-Shukra, 5-Shani, 6-Ravi
     // Date.getDay(): 0-Ravi, 1-Som, 2-Mangal, 3-Budh, 4-Guru, 5-Shukra, 6-Shani
-    const dayIndex = date.getDay() 
+    const dayIndex = date.getDay()
     const gujaratiDayMap = ["રવિવાર", "સોમવાર", "મંગળવાર", "બુધવાર", "ગુરુવાર", "શુક્રવાર", "શનિવાર"]
     const newDay = gujaratiDayMap[dayIndex]
-    
+
     setDayOfWeek(newDay)
   }, [selectedDay])
 
@@ -196,22 +282,17 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
     setMeals((prev) => ({
       breakfast: {
         ...prev.breakfast,
-        items: prev.breakfast.items.map((it) => ({ ...it, unit: "kg" })),
+        items: prev.breakfast.items.map((it) => ({ ...it, unit: it.unit || "kg" })),
       },
       lunch: {
         ...prev.lunch,
-        items: prev.lunch.items.map((it) => ({ ...it, unit: "kg" })),
+        items: prev.lunch.items.map((it) => ({ ...it, unit: it.unit || "kg" })),
       },
       dinner: {
         ...prev.dinner,
-        items: prev.dinner.items.map((it) => ({ ...it, unit: "kg" })),
+        items: prev.dinner.items.map((it) => ({ ...it, unit: it.unit || "kg" })),
       },
     }))
-    setBreakfastNewUnit("kg")
-    setExtraItemForm({
-      lunch: { name: "", quantity: 0, unit: "kg" },
-      dinner: { name: "", quantity: 0, unit: "kg" },
-    })
   }, [])
 
   useEffect(() => {
@@ -239,21 +320,25 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
 
   function updateMetricField(
     mealType: MealType,
-    field: "calories" | "categories" | "maximum",
+    field: "calories" | "categories" | "maximum" | "totalOverride",
     value: string
   ) {
     setMeals((prev) => {
       const nextMeal = { ...prev[mealType], [field]: value }
-      const total =
-        (parseFloat(nextMeal.calories) || 0) +
-        (parseFloat(nextMeal.categories) || 0) +
-        (parseFloat(nextMeal.maximum) || 0)
+
+      // If we are updating VIP, Staff, or Guest, recalculate the total.
+      // If we are updating Total directly, use that value.
+      if (field !== "totalOverride") {
+        const total =
+          (parseFloat(nextMeal.calories) || 0) +
+          (parseFloat(nextMeal.categories) || 0) +
+          (parseFloat(nextMeal.maximum) || 0)
+        nextMeal.totalOverride = String(total)
+      }
+
       return {
         ...prev,
-        [mealType]: {
-          ...nextMeal,
-          totalOverride: String(total),
-        },
+        [mealType]: nextMeal,
       }
     })
   }
@@ -269,7 +354,7 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
   }
 
   function removeItem(mealType: MealType, itemId: string) {
-    if (!confirm("Do you want to delete this field?")) return
+    if (!confirm("શું તમે આ વસ્તુ ડીલીટ કરવા માંગો છો?")) return
     setMeals((prev) => ({
       ...prev,
       [mealType]: {
@@ -279,70 +364,74 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
     }))
   }
 
-  function addBreakfastItem() {
-    const name = breakfastNewName.trim()
-    if (!name) return
-    const newItem: DailyMenuItem = {
-      ...emptyItem(),
-      name,
-      quantity: Number.isFinite(breakfastNewQuantity) ? breakfastNewQuantity : 0,
-      unit: breakfastNewUnit,
-      value: "",
-    }
-    setMeals((prev) => ({
-      ...prev,
-      breakfast: { ...prev.breakfast, items: [...prev.breakfast.items, newItem] },
-    }))
-    setBreakfastNewName("")
-    setBreakfastNewQuantity(0)
-    setBreakfastNewUnit("kg")
+  function addItem(mealType: MealType, afterId?: string, itemToClone?: DailyMenuItem, defaultLabel?: string) {
+    setMeals((prev) => {
+      const currentItems = [...prev[mealType].items]
+      let newItem: DailyMenuItem
+
+      if (itemToClone) {
+        // Clone the item but give it a fresh ID
+        newItem = {
+          ...itemToClone,
+          id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        }
+      } else {
+        const nextNum = currentItems.length + 1
+        const label = defaultLabel || `${MEAL_TITLES[mealType]} - ${nextNum}`
+        newItem = emptyItem(label)
+      }
+
+      if (afterId) {
+        const index = currentItems.findIndex(it => it.id === afterId)
+        if (index !== -1) {
+          currentItems.splice(index + 1, 0, newItem)
+        } else {
+          currentItems.push(newItem)
+        }
+      } else {
+        currentItems.push(newItem)
+      }
+      return {
+        ...prev,
+        [mealType]: { ...prev[mealType], items: currentItems },
+      }
+    })
   }
 
-  function addExtraItem(mealType: "lunch" | "dinner") {
-    const form = extraItemForm[mealType]
-    const name = form.name.trim()
-    if (!name) return
-    const newItem: DailyMenuItem = {
-      ...emptyItem(),
-      name,
-      quantity: Number.isFinite(form.quantity) ? form.quantity : 0,
-      unit: form.unit,
-      value: "",
-    }
-    setMeals((prev) => ({
-      ...prev,
-      [mealType]: {
-        ...prev[mealType],
-        items: [...prev[mealType].items, newItem],
-      },
-    }))
-    setExtraItemForm((prev) => ({
-      ...prev,
-      [mealType]: { name: "", quantity: 0, unit: "kg" },
-    }))
-  }
-
-  function saveDay() {
+  async function saveDay() {
     const day = selectedDay.trim()
     if (!day) return
 
     // Combine for backward compatibility or simple display
     const fullTithi = [tithiMonth, tithiPhase, tithiDay].filter(Boolean).join(" ")
-
-    saveDayMenu(day, {
+    const menuState: DailyMenuState = {
       meals,
       dayOfWeek,
       tithiMonth,
       tithiPhase,
       tithiDay,
       tithi: fullTithi,
-    })
+    }
+
+    // 1. Save locally first
+    saveDayMenu(day, menuState)
     setSavedDays((prev) => (prev.includes(day) ? prev : [day, ...prev]))
     setEditingDay(day)
-    window.dispatchEvent(new Event("dailyMenuSaved"))
     setSaveNotice("સેવ સફળ!")
-    if (saveNoticeTimerRef.current) clearTimeout(saveNoticeTimerRef.current)
-    saveNoticeTimerRef.current = setTimeout(() => setSaveNotice(""), 3000)
+
+    // 2. Sync to Firestore
+    setIsSyncing(true)
+    try {
+      await saveDayMenuToFirestore(day, menuState)
+      setSaveNotice("ક્લાઉડ સિંક સફળ! ✅")
+    } catch (err: any) {
+      console.error("Firestore sync failed:", err)
+      setSaveNotice(`લોકલ સેવ OK (⚠️ ક્લાઉડ નિષ્ફળ)`)
+    } finally {
+      setIsSyncing(false)
+      if (saveNoticeTimerRef.current) clearTimeout(saveNoticeTimerRef.current)
+      saveNoticeTimerRef.current = setTimeout(() => setSaveNotice(""), 5000)
+    }
   }
 
   function editDay(day: string) {
@@ -390,7 +479,7 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <h2 className="font-serif text-lg text-foreground md:text-xl">
-              Super Admin — Add/Edit Daily Menu
+              સુપર એડમિન — દૈનિક મેનુ ઉમેરો/એડિટ કરો
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               દિવસ પસંદ કરો, નાસ્તો/બપોરે ભોજન/રાત્રી ભોજન માટે આઇટમ ઉમેરો અને સેવ કરો.
@@ -399,7 +488,7 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
 
           <div className="flex items-center gap-2 self-end">
             {/* <CalendarDays className="h-4 w-4 text-primary" /> */}
-            
+
           </div>
         </div>
 
@@ -485,7 +574,7 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
           <div className="rounded-xl border border-border bg-background/50 p-4 lg:col-span-2">
             <div className="flex items-center justify-between gap-3">
               <Label className="block text-sm font-medium text-foreground">
-                Saved Days
+                સેવ કરેલા દિવસો
               </Label>
               {/* <Button type="button" variant="secondary" size="sm" onClick={() => setSelectedDay("")}>
                 સાફ કરો
@@ -493,7 +582,7 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
             </div>
 
             <div className="mt-3 space-y-2">
-              {savedDays.map((d) => (
+              {savedDays.slice(0, 3).map((d) => (
                 <div
                   key={d}
                   className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2"
@@ -507,426 +596,307 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
                       onClick={() => editDay(d)}
                       className="h-7"
                     >
-                      Edit
+                      એડિટ
                     </Button>
                   </div>
                 </div>
               ))}
+              {savedDays.length > 3 && (
+                <p className="text-[10px] text-center text-muted-foreground italic">
+                  વધુ દિવસો જોવા માટે તારીખ પસંદ કરો.
+                </p>
+              )}
               {savedDays.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No saved days yet.</p>
+                <p className="text-sm text-muted-foreground">હજી સુધી કોઈ દિવસો સેવ નથી થયા.</p>
               ) : null}
             </div>
           </div>
         </div>
       </section>
 
-      {/* Meals stacked view: Breakfast -> Lunch -> Dinner */}
+      {/* Meals: tabs + single-meal editor */}
       <section className="space-y-4">
-        {(Object.keys(MEAL_TITLES) as MealType[]).map((mealType) => {
+        <div className="flex gap-2 p-1.5 bg-muted/30 rounded-2xl w-full border border-border/50 shadow-inner">
+          {(Object.keys(MEAL_TITLES) as MealType[]).map((mt) => (
+            <button
+              key={mt}
+              onClick={() => setSelectedMeal(mt)}
+              className={`flex-1 rounded-xl px-4 py-3 text-base font-bold transition-all duration-200 ${selectedMeal === mt
+                ? "bg-white text-primary shadow-lg ring-1 ring-border/10 translate-y-[-2px]"
+                : "text-muted-foreground hover:text-foreground hover:bg-background/40"
+                }`}
+            >
+              {MEAL_TITLES[mt]}
+            </button>
+          ))}
+        </div>
+
+        {(() => {
+          const mealType = selectedMeal
           const meal = meals[mealType]
           const totalValue = meal.totalOverride
           return (
-            <div key={mealType} className="rounded-xl border border-border bg-card p-4 shadow-sm">
-              <Label className="block text-sm font-semibold text-foreground">
-                {MEAL_TITLES[mealType]}
-              </Label>
+            <div key={mealType} className="rounded-xl border border-border bg-card p-4 shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between mb-4">
+                <Label className="block text-sm font-bold text-foreground">
+                  {MEAL_TITLES[mealType]}
+                </Label>
+              </div>
 
-              {/* Macro/target row */}
-              {mealType !== "breakfast" ? (
-                <div className="mt-4 rounded-xl border border-border bg-background/50 p-3">
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <p className="text-[11px] font-medium text-muted-foreground">વી.આઇ.પી.</p>
-                      <Input
-                        type="number"
-                        value={meal.calories}
-                        onChange={(e) =>
-                          updateMetricField(mealType, "calories", e.target.value)
-                        }
-                        className="mt-1 h-8 bg-background text-center"
-                      />
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-medium text-muted-foreground">સ્ટાર્ચ</p>
-                      <Input
-                        type="number"
-                        value={meal.categories}
-                        onChange={(e) =>
-                          updateMetricField(mealType, "categories", e.target.value)
-                        }
-                        className="mt-1 h-8 bg-background text-center"
-                      />
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-medium text-muted-foreground">મહેમાન</p>
-                      <Input
-                        type="number"
-                        value={meal.maximum}
-                        onChange={(e) =>
-                          updateMetricField(mealType, "maximum", e.target.value)
-                        }
-                        className="mt-1 h-8 bg-background text-center"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className="text-xs font-semibold text-foreground">કુલ:</span>
+              {/* Metrics Card */}
+              <div className="mb-6 rounded-xl border border-border bg-background/30 p-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">વી.આઇ.પી.</Label>
                     <Input
                       type="number"
-                      value={totalValue}
-                      onChange={(e) =>
-                        updateMeal(mealType, { totalOverride: e.target.value })
-                      }
-                      className="h-8 w-20 bg-background text-center text-xs font-semibold text-primary"
+                      value={meal.calories}
+                      onChange={(e) => updateMetricField(mealType, "calories", e.target.value)}
+                      className="mt-1 h-10 bg-background text-center font-medium border-border/60 focus:border-primary/50"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">સ્ટાફ</Label>
+                    <Input
+                      type="number"
+                      value={meal.categories}
+                      onChange={(e) => updateMetricField(mealType, "categories", e.target.value)}
+                      className="mt-1 h-10 bg-background text-center font-medium border-border/60 focus:border-primary/50"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">મહેમાન</Label>
+                    <Input
+                      type="number"
+                      value={meal.maximum}
+                      onChange={(e) => updateMetricField(mealType, "maximum", e.target.value)}
+                      className="mt-1 h-10 bg-background text-center font-medium border-border/60 focus:border-primary/50"
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">કુલ</Label>
+                    <Input
+                      type="number"
+                      value={meal.totalOverride ||
+                        ((parseFloat(meal.calories) || 0) +
+                          (parseFloat(meal.categories) || 0) +
+                          (parseFloat(meal.maximum) || 0)).toString()}
+                      onChange={(e) => updateMetricField(mealType, "totalOverride", e.target.value)}
+                      className="mt-1 h-10 bg-primary/5 text-center font-bold border-primary/20 text-primary focus:ring-1 focus:ring-primary/40 rounded-md"
                     />
                   </div>
                 </div>
-              ) : null}
+              </div>
 
-              {/* Items */}
-              {mealType === "breakfast" ? (
-                <div className="mt-4 space-y-3">
-                  {/* Breakfast top metrics (as requested) */}
-                  <div className="rounded-xl border border-border bg-background/50 p-3">
-                    <div className="grid grid-cols-3 gap-2">
-                      <div>
-                        <p className="text-[11px] font-medium text-muted-foreground">વી.આઇ.પી.</p>
-                        <Input
-                          type="number"
-                          value={meal.calories}
-                          onChange={(e) =>
-                            updateMetricField(mealType, "calories", e.target.value)
-                          }
-                          className="mt-1 h-8 bg-background text-center"
-                        />
-                      </div>
-                      <div>
-                        <p className="text-[11px] font-medium text-muted-foreground">સ્ટાર્ચ</p>
-                        <Input
-                          type="number"
-                          value={meal.categories}
-                          onChange={(e) =>
-                            updateMetricField(mealType, "categories", e.target.value)
-                          }
-                          className="mt-1 h-8 bg-background text-center"
-                        />
-                      </div>
-                      <div>
-                        <p className="text-[11px] font-medium text-muted-foreground">મહેમાન</p>
-                        <Input
-                          type="number"
-                          value={meal.maximum}
-                          onChange={(e) =>
-                            updateMetricField(mealType, "maximum", e.target.value)
-                          }
-                          className="mt-1 h-8 bg-background text-center"
-                        />
-                      </div>
-                    </div>
+              {/* Tables Editor */}
+              <div className="space-y-8">
+                {(() => {
+                  const items = meal.items
 
-                  <div className="mt-2 flex items-center gap-2">
-                      <span className="text-xs font-semibold text-foreground">કુલ:</span>
-                    <Input
-                      type="number"
-                      value={totalValue}
-                      onChange={(e) =>
-                        updateMeal(mealType, { totalOverride: e.target.value })
-                      }
-                      className="h-8 w-20 bg-background text-center text-xs font-semibold text-primary"
-                    />
-                    </div>
-                  </div>
+                  // Helper to filter items for splitting into Thakorji and General groups
+                  // For breakfast, we show all in one table.
+                  const isMainMeal = (mealType === "lunch" || mealType === "dinner")
 
-                  {/* Add breakfast item: name + quantity + unit */}
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium text-foreground">
-                      Add Item (નાસ્તો નામ)
-                    </Label>
-                    <div className="space-y-3">
-                      <div>
-                        <Label className="mb-1.5 block text-[11px] font-medium text-muted-foreground">
-                          નામ
-                        </Label>
-                        <RecipeSuggestionInput
-                          value={breakfastNewName}
-                          onChange={(v) => setBreakfastNewName(v)}
-                          recipes={recipes}
-                          placeholder="નાસ્તો લખો..."
-                          className="bg-background"
-                        />
-                      </div>
+                  const renderTable = (itemsToRender: DailyMenuItem[], title?: string, color: "orange" | "blue" = "orange") => {
+                    const isBlue = color === "blue"
+                    const headerBg = isBlue ? "bg-blue-50/50" : "bg-primary/5"
+                    const textColor = isBlue ? "text-blue-600" : "text-primary"
+                    const dotColor = isBlue ? "bg-blue-500" : "bg-primary"
+                    const borderColor = isBlue ? "border-blue-200/60" : "border-border/60"
 
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="col-span-2 space-y-1">
-                          <Label className="text-[11px] font-medium text-muted-foreground">
-                            જથ્થો
-                          </Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="any"
-                            value={breakfastNewQuantity}
-                            onChange={(e) =>
-                              setBreakfastNewQuantity(
-                                parseFloat(e.target.value || "0")
-                              )
-                            }
-                            className="bg-background"
-                          />
-                        </div>
-                        <div className="col-span-1 space-y-1">
-                          <Label className="text-[11px] font-medium text-muted-foreground">
-                            યુનિટ
-                          </Label>
-                          <select
-                            value={breakfastNewUnit}
-                            onChange={(e) => setBreakfastNewUnit(e.target.value)}
-                            className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
-                          >
-                            {UNIT_OPTIONS.map((u) => (
-                              <option key={u} value={u}>
-                                {u}
-                              </option>
+                    return (
+                      <div className={`relative overflow-x-auto rounded-xl border border-border bg-background/20 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500 ${isBlue ? 'ring-1 ring-blue-100/50' : ''}`}>
+                        {title && (
+                          <div className={`${headerBg} px-5 py-3 border-b ${borderColor}`}>
+                            <h4 className={`text-lg font-bold ${textColor} flex items-center gap-2.5`}>
+                              <span className={`w-2 h-2 rounded-full ${dotColor} shadow-sm`} />
+                              {title}
+                            </h4>
+                          </div>
+                        )}
+                        <table className="w-full text-left border-collapse min-w-[700px]">
+                          <thead>
+                            <tr className={`border-b border-border ${isBlue ? 'bg-blue-50/20' : 'bg-muted/30'}`}>
+                              <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wider w-[25%] border-r border-border/50">વિગત / વાનગી</th>
+                              <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wider w-[35%] border-r border-border/50">વસ્તુનું નામ</th>
+                              <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wider w-[20%] border-r border-border/50">માપ</th>
+                              <th className="px-4 py-3 text-xs font-bold text-muted-foreground uppercase tracking-wider w-[15%] border-r border-border/50">વદ-ઘટ</th>
+                              <th className="px-2 py-3 text-xs text-center w-[50px]"></th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border/60">
+                            {itemsToRender.map((it, idx) => (
+                              <tr key={it.id} className={`group ${isBlue ? 'hover:bg-blue-50/10' : 'hover:bg-muted/10'} transition-colors`}>
+                                <td className="p-2 align-top border-r border-border/40">
+                                  <div className="flex flex-col gap-1">
+                                    <Input
+                                      value={it.label || `${MEAL_TITLES[mealType]} - ${idx + 1}`}
+                                      onChange={(e) => updateItem(mealType, it.id, { label: e.target.value })}
+                                      className={`h-auto border-none bg-transparent p-0 px-2 text-[10px] font-bold ${isBlue ? 'text-blue-600/70' : 'text-primary/70'} shadow-none focus-visible:ring-0`}
+                                    />
+                                    <RecipeSuggestionInput
+                                      value={it.name}
+                                      onChange={(v) => updateItem(mealType, it.id, { name: v })}
+                                      recipes={allSuggestions}
+                                      placeholder="નવી વાનગી..."
+                                      className={`w-full bg-background border border-border/60 rounded-md shadow-none focus-visible:ring-1 ${isBlue ? 'focus-visible:ring-blue-400/30' : 'focus-visible:ring-primary/30'} text-sm font-medium px-2`}
+                                    />
+                                  </div>
+                                </td>
+                                <td className="p-2 align-top border-r border-border/40">
+                                  <RecipeSuggestionInput
+                                    value={it.value}
+                                    onChange={(v) => updateItem(mealType, it.id, { value: v })}
+                                    recipes={allSuggestions}
+                                    placeholder="વસ્તુનું નામ લખો..."
+                                    className={`bg-background border border-border/60 rounded-md shadow-none focus-visible:ring-1 ${isBlue ? 'focus-visible:ring-blue-400/30' : 'focus-visible:ring-primary/30'} text-sm`}
+                                  />
+                                </td>
+                                <td className="p-2 align-top border-r border-border/40">
+                                  <div className="flex items-center gap-1.5 px-1">
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      step="any"
+                                      value={Number.isFinite(it.quantity) ? it.quantity : 0}
+                                      onChange={(e) => updateItem(mealType, it.id, { quantity: parseFloat(e.target.value || "0") })}
+                                      className="h-9 flex-1 bg-background/50 text-center text-sm border-border/60"
+                                    />
+                                    <select
+                                      value={it.unit}
+                                      onChange={(e) => updateItem(mealType, it.id, { unit: e.target.value })}
+                                      className="h-9 w-20 rounded-md border border-border/60 bg-background/50 px-2 text-xs focus:border-primary/50 outline-none"
+                                    >
+                                      {UNIT_OPTIONS.map((u) => (
+                                        <option key={u} value={u}>{u}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                </td>
+                                <td className="p-2 align-top border-r border-border/40">
+                                  <div className="flex items-center gap-0 w-fit mx-auto bg-background rounded-xl border border-border shadow-sm group focus-within:ring-1 focus-within:ring-primary/30 h-10 overflow-hidden">
+                                    <Input
+                                      type="number"
+                                      value={it.adjustment ?? ""}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        updateItem(mealType, it.id, { adjustment: val });
+                                      }}
+                                      className="w-14 h-full border-none text-center font-bold text-lg p-0 focus-visible:ring-0 shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    />
+                                    <div className="flex flex-col border-l border-border h-full">
+                                      <button
+                                        type="button"
+                                        className="flex-1 px-2 hover:bg-muted flex items-center justify-center border-b border-border/50 text-muted-foreground hover:text-foreground transition-all active:bg-muted/80"
+                                        onClick={() => {
+                                          const current = parseInt(it.adjustment || "0", 10) || 0
+                                          updateItem(mealType, it.id, { adjustment: String(current + 1) })
+                                        }}
+                                      >
+                                        <ChevronUp className="h-3.5 w-3.5" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="flex-1 px-2 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-all active:bg-muted/80"
+                                        onClick={() => {
+                                          const current = parseInt(it.adjustment || "0", 10) || 0
+                                          updateItem(mealType, it.id, { adjustment: String(current - 1) })
+                                        }}
+                                      >
+                                        <ChevronDown className="h-3.5 w-3.5" />
+                                      </button>
+                                    </div>
+                                    <select
+                                      value={it.adjustmentUnit || ""}
+                                      onChange={(e) => updateItem(mealType, it.id, { adjustmentUnit: e.target.value })}
+                                      className="h-full border-l border-border bg-background px-2 text-[10px] font-bold focus:ring-0 focus:outline-none hover:bg-muted/30 transition-colors w-[65px] appearance-none text-center outline-none"
+                                    >
+                                      <option value="">-</option>
+                                      {["કુંડી", "ડોલ", "ટબ", "કેરેટ", "કેન", "બોક્સ"].map((u) => (
+                                        <option key={u} value={u}>{u}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                </td>
+                                <td className="p-2 align-middle text-center">
+                                  <div className="flex flex-col gap-1 items-center">
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className={`h-7 w-7 rounded-sm ${isBlue ? 'bg-blue-100 text-blue-600 hover:bg-blue-200' : 'bg-primary/10 text-primary hover:bg-primary/20'} transition-all shadow-sm`}
+                                      onClick={() => addItem(mealType, it.id, it)}
+                                    >
+                                      <span className="text-lg font-bold leading-none">+</span>
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className={`h-7 w-7 rounded-sm text-destructive hover:bg-destructive/10 transition-all`}
+                                      onClick={() => removeItem(mealType, it.id)}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </td>
+                              </tr>
                             ))}
-                          </select>
-                        </div>
-                      </div>
+                            {itemsToRender.length === 0 && (
+                              <tr>
+                                <td colSpan={5} className="py-8 text-center text-muted-foreground italic text-xs">
+                                  આ સેક્શનમાં કોઈ આઈટમ નથી.
+                                </td>
+                              </tr>
+                            )}
 
-                      <div className="flex justify-end">
-                        <Button type="button" onClick={addBreakfastItem} className="gap-2">
-                          ઉમેરો
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                    {meal.items.map((it) => (
-                      <div
-                        key={it.id}
-                        className="rounded-xl border border-border bg-background/50 p-3"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1">
-                            <RecipeSuggestionInput
-                              value={it.name}
-                              onChange={(v) => updateItem(mealType, it.id, { name: v })}
-                              recipes={recipes}
-                              placeholder="નાસ્તો લખો..."
-                              className="h-auto border-none bg-transparent p-0 text-base font-semibold shadow-none focus-visible:ring-0"
-                            />
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
-                            onClick={() => removeItem(mealType, it.id)}
-                            aria-label="Remove item"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-
-                        <div className="mt-3 grid grid-cols-3 gap-3">
-                          <div className="col-span-2">
-                            <Label className="mb-1.5 block text-[11px] font-medium text-muted-foreground">
-                              જથ્થો
-                            </Label>
-                            <Input
-                              type="number"
-                              min="0"
-                              step="any"
-                              value={Number.isFinite(it.quantity) ? it.quantity : 0}
-                              onChange={(e) =>
-                                updateItem(mealType, it.id, {
-                                  quantity: parseFloat(e.target.value || "0"),
-                                })
-                              }
-                              className="bg-background"
-                            />
-                          </div>
-                          <div className="col-span-1">
-                            <Label className="mb-1.5 block text-[11px] font-medium text-muted-foreground">
-                              યુનિટ
-                            </Label>
-                            <select
-                              value={it.unit}
-                              onChange={(e) =>
-                                updateItem(mealType, it.id, { unit: e.target.value })
-                              }
-                              className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
+                            {/* Dedicated Add New Item Row - Placed right after the last content row */}
+                            <tr
+                              className={`cursor-pointer transition-colors ${isBlue ? 'hover:bg-blue-50/30' : 'hover:bg-primary/5'}`}
+                              onClick={() => {
+                                const lastId = itemsToRender.length > 0 ? itemsToRender[itemsToRender.length - 1].id : undefined
+                                addItem(mealType, lastId, undefined, title)
+                              }}
                             >
-                              {UNIT_OPTIONS.map((u) => (
-                                <option key={u} value={u}>
-                                  {u}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
+                              <td colSpan={5} className="p-3">
+                                <div className={`flex items-center justify-center gap-2 py-2 border-2 border-dashed rounded-lg ${isBlue ? 'border-blue-200 text-blue-600' : 'border-primary/20 text-primary'} font-semibold text-sm`}>
+                                  <Plus className="h-4 w-4" />
+                                  નવી આઈટમ ઉમેરો {title ? `(${title})` : ""}
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                  {meal.items.map((it) => (
-                    <div
-                      key={it.id}
-                      draggable
-                      onDragStart={(e) => onDragStart(mealType, it.id, e)}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => onDrop(mealType, it.id, e)}
-                      className="rounded-xl border border-border bg-background/50 p-3"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <Label className="text-sm font-semibold text-foreground">{it.name}</Label>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => removeItem(mealType, it.id)}
-                          aria-label="Remove item"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <div className="mt-2">
-                        <Label className="mb-1.5 block text-[11px] font-medium text-muted-foreground">
-                          નામ
-                        </Label>
-                        <RecipeSuggestionInput
-                          value={it.value}
-                          onChange={(v) => updateItem(mealType, it.id, { value: v })}
-                          recipes={recipes}
-                          placeholder="નામ લખો..."
-                          className="bg-background"
-                        />
-                      </div>
-                      <div className="mt-2 grid grid-cols-3 gap-3">
-                        <div className="col-span-2">
-                          <Label className="mb-1.5 block text-[11px] font-medium text-muted-foreground">
-                            જથ્થો
-                          </Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="any"
-                            value={Number.isFinite(it.quantity) ? it.quantity : 0}
-                            onChange={(e) =>
-                              updateItem(mealType, it.id, {
-                                quantity: parseFloat(e.target.value || "0"),
-                              })
-                            }
-                            className="bg-background"
-                          />
-                        </div>
-                        <div className="col-span-1">
-                          <Label className="mb-1.5 block text-[11px] font-medium text-muted-foreground">
-                            યુનિટ
-                          </Label>
-                          <select
-                            value={it.unit}
-                            onChange={(e) =>
-                              updateItem(mealType, it.id, { unit: e.target.value })
-                            }
-                            className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
-                          >
-                            {UNIT_OPTIONS.map((u) => (
-                              <option key={u} value={u}>
-                                {u}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  }
 
-                  <div className="rounded-xl border border-border bg-background/50 p-3">
-                    <Label className="mb-1.5 block text-sm font-semibold text-foreground">
-                      નવું ફીલ્ડ
-                    </Label>
-                    <div>
-                      <Label className="mb-1.5 block text-[11px] font-medium text-muted-foreground">
-                        નામ
-                      </Label>
-                      <RecipeSuggestionInput
-                        value={extraItemForm[mealType as "lunch" | "dinner"].name}
-                        onChange={(v) =>
-                          setExtraItemForm((prev) => ({
-                            ...prev,
-                            [mealType]: { ...prev[mealType as "lunch" | "dinner"], name: v },
-                          }))
-                        }
-                        recipes={recipes}
-                        placeholder=""
-                        className="bg-background"
-                      />
-                    </div>
-                    <div className="mt-3 grid grid-cols-3 gap-3">
-                      <div className="col-span-2">
-                        <Label className="mb-1.5 block text-[11px] font-medium text-muted-foreground">
-                          જથ્થો
-                        </Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="any"
-                          value={extraItemForm[mealType as "lunch" | "dinner"].quantity}
-                          onChange={(e) =>
-                            setExtraItemForm((prev) => ({
-                              ...prev,
-                              [mealType]: {
-                                ...prev[mealType as "lunch" | "dinner"],
-                                quantity: parseFloat(e.target.value || "0"),
-                              },
-                            }))
-                          }
-                          className="bg-background"
-                        />
-                      </div>
-                      <div className="col-span-1">
-                        <Label className="mb-1.5 block text-[11px] font-medium text-muted-foreground">
-                          યુનિટ
-                        </Label>
-                        <select
-                          value={extraItemForm[mealType as "lunch" | "dinner"].unit}
-                          onChange={(e) =>
-                            setExtraItemForm((prev) => ({
-                              ...prev,
-                              [mealType]: { ...prev[mealType as "lunch" | "dinner"], unit: e.target.value },
-                            }))
-                          }
-                          className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
-                        >
-                          {UNIT_OPTIONS.map((u) => (
-                            <option key={u} value={u}>
-                              {u}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
+                  if (isMainMeal) {
+                    const thakorjiItems = items.filter(it => it.label?.includes("ઠાકોરજી"))
+                    const generalItems = items.filter(it => !it.label?.includes("ઠાકોરજી"))
 
-                    <div className="mt-3 flex justify-end">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() => addExtraItem(mealType as "lunch" | "dinner")}
-                      >
-                        ઉમેરો
-                      </Button>
-                    </div>
-                  </div>
+                    return (
+                      <div className="space-y-10">
+                        {renderTable(thakorjiItems, "ઠાકોરજી માટે", "orange")}
+                        {renderTable(generalItems, "જેનરલ", "blue")}
+                      </div>
+                    )
+                  }
+
+                  return renderTable(items)
+                })()}
+              </div>
+
+              {meal.items.length === 0 && (
+                <div className="mt-4 flex justify-center">
+                  <Button type="button" onClick={() => addItem(mealType)} className="gap-2 bg-primary hover:bg-primary/90">
+                    + આઈટમ ઉમેરો
+                  </Button>
                 </div>
               )}
             </div>
           )
-        })}
+        })()}
       </section>
 
       <section className="flex flex-col items-start justify-between gap-3 md:flex-row md:items-center">
@@ -938,13 +908,13 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
             <p className="text-sm font-medium text-primary">{saveNotice}</p>
           ) : null}
           <div className="flex items-center gap-3">
-          <Button type="button" variant="outline" onClick={() => setEditingDay(null)}>
-            Cancel
-          </Button>
-          <Button type="button" onClick={saveDay} className="gap-2">
-            <CalendarDays className="h-4 w-4" />
-            સેવ કરો
-          </Button>
+            <Button type="button" variant="outline" onClick={() => setEditingDay("")}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={saveDay} className="gap-2">
+              <CalendarDays className="h-4 w-4" />
+              સેવ કરો
+            </Button>
           </div>
         </div>
       </section>

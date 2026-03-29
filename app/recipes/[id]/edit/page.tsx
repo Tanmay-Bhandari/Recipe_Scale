@@ -53,23 +53,23 @@ export default function EditRecipePage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="mb-6 font-serif text-2xl">Edit Recipe</h1>
+      <h1 className="mb-6 font-serif text-2xl">વાનગી સુધારો</h1>
       {recipe ? (
         <RecipeForm
           editingRecipe={recipe}
           onAdd={(r) => {
             try { window.dispatchEvent(new Event('recipesSaved')) } catch (e) {}
-            toast({ title: 'Saved', description: 'Recipe updated' })
+            toast({ title: 'સેવ સફળ', description: 'રેસીપી સફળતાપૂર્વક સુધારેલ છે' })
             if (typeof window !== 'undefined') localStorage.setItem("recipeScaleActiveTab", "recipes")
-            router.push('/')
+            router.push('/?tab=recipes')
           }}
           onClose={() => {
             if (typeof window !== 'undefined') localStorage.setItem("recipeScaleActiveTab", "recipes")
-            router.push('/')
+            router.push('/?tab=recipes')
           }}
         />
       ) : (
-        <div>Loading...</div>
+        <div className="text-center py-10 font-serif text-lg">લોડ થઈ રહ્યું છે...</div>
       )}
     </div>
   )

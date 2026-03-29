@@ -67,13 +67,13 @@ export function signupUser(input: {
 }): { ok: boolean; message: string } {
   const users = loadUsers()
   const email = input.email.trim().toLowerCase()
-  if (!email) return { ok: false, message: "Email is required" }
+  if (!email) return { ok: false, message: "Email લખવું જરૂરી છે" }
   if (users.some((u) => u.email.toLowerCase() === email)) {
-    return { ok: false, message: "Email already exists" }
+    return { ok: false, message: "આ Email પહેલાથી નોંધાયેલું છે" }
   }
   const next: AuthUser = {
     id: `u-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    name: input.name.trim() || "User",
+    name: input.name.trim() || "વપરાશકર્તા",
     email,
     password: input.password,
     role: input.role === "admin" ? "user" : "user",
@@ -82,9 +82,9 @@ export function signupUser(input: {
   }
   localStorage.setItem(USERS_KEY, JSON.stringify([...users, next]))
   if (input.role === "admin") {
-    return { ok: true, message: "Signup successful. Admin approval is pending." }
+    return { ok: true, message: "સાઇન અપ સફળ. એડમિનની મંજૂરી બાકી છે." }
   }
-  return { ok: true, message: "Signup successful" }
+  return { ok: true, message: "સાઇન અપ સફળ" }
 }
 
 export function loginUser(input: {
@@ -95,7 +95,7 @@ export function loginUser(input: {
   const email = input.email.trim().toLowerCase()
   const found = users.find((u) => u.email.toLowerCase() === email)
   if (!found || found.password !== input.password) {
-    return { ok: false, message: "Invalid email or password" }
+    return { ok: false, message: "ખોટો Email અથવા Password" }
   }
   if (found.requestedRole === "admin" && found.approvalStatus === "pending") {
     // Can still login as user-only while waiting for approval.
@@ -125,7 +125,7 @@ export function listPendingAdminRequests(): AdminApprovalRequest[] {
 export function approveAdminRequest(userId: string): { ok: boolean; message: string } {
   const users = loadUsers()
   const idx = users.findIndex((u) => u.id === userId)
-  if (idx < 0) return { ok: false, message: "User not found" }
+  if (idx < 0) return { ok: false, message: "વપરાશકર્તા મળ્યો નથી" }
   const u = users[idx]
   users[idx] = {
     ...u,
@@ -134,13 +134,13 @@ export function approveAdminRequest(userId: string): { ok: boolean; message: str
     approvalStatus: "approved",
   }
   localStorage.setItem(USERS_KEY, JSON.stringify(users))
-  return { ok: true, message: "Admin role approved" }
+  return { ok: true, message: "એડમિન રોલ મંજૂર કર્યો" }
 }
 
 export function rejectAdminRequest(userId: string): { ok: boolean; message: string } {
   const users = loadUsers()
   const idx = users.findIndex((u) => u.id === userId)
-  if (idx < 0) return { ok: false, message: "User not found" }
+  if (idx < 0) return { ok: false, message: "વપરાશકર્તા મળ્યો નથી" }
   const u = users[idx]
   users[idx] = {
     ...u,
@@ -149,7 +149,7 @@ export function rejectAdminRequest(userId: string): { ok: boolean; message: stri
     approvalStatus: "rejected",
   }
   localStorage.setItem(USERS_KEY, JSON.stringify(users))
-  return { ok: true, message: "Admin request rejected" }
+  return { ok: true, message: "એડમિન વિનંતી નકારી કાઢી" }
 }
 
 export function getSession(): AuthSession | null {

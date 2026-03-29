@@ -8,10 +8,9 @@ export function EmptyRecipes() {
       <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
         <BookOpen className="h-6 w-6 text-primary" />
       </div>
-      <h3 className="font-serif text-lg text-foreground">No recipes yet</h3>
+      <h3 className="font-serif text-lg text-foreground">હજી સુધી કોઈ રેસીપી નથી</h3>
       <p className="mt-1 max-w-xs text-sm text-muted-foreground">
-        Add your first recipe to get started. You can then scale ingredients to
-        any quantity you need.
+        શરૂ કરવા માટે તમારી પહેલી રેસીપી ઉમેરો. પછી તમે કોઈપણ પ્રમાણ માટે સામગ્રી ગણી (scale) શકશો.
       </p>
     </div>
   )

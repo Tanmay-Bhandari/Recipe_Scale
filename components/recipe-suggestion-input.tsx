@@ -11,6 +11,8 @@ interface RecipeSuggestionInputProps {
   placeholder?: string
   className?: string
   disabled?: boolean
+  id?: string
+  required?: boolean
 }
 
 export function RecipeSuggestionInput({
@@ -20,6 +22,8 @@ export function RecipeSuggestionInput({
   placeholder = "નામ લખો...",
   className,
   disabled = false,
+  id,
+  required,
 }: RecipeSuggestionInputProps) {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([])
@@ -29,19 +33,27 @@ export function RecipeSuggestionInput({
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const allSuggestions = useMemo(() => {
-    return recipes.map(r => r.name).sort()
+    return recipes.map(r => r.name).sort((a, b) => a.localeCompare(b, 'gu'))
   }, [recipes])
 
   useEffect(() => {
-    if (!userTyped || value.trim().length < 1) {
+    if ((!userTyped && !showSuggestions) || value.trim().length < 1) {
       setFilteredSuggestions([])
       setShowSuggestions(false)
       return
     }
 
-    const filtered = allSuggestions.filter((name) =>
-      name.toLowerCase().includes(value.toLowerCase())
-    ).slice(0, 10)
+    const q = value.toLowerCase()
+    
+    // Separate matches into "starts with" and "includes" for better priority
+    const startsWith = allSuggestions.filter((name) =>
+      name.toLowerCase().startsWith(q)
+    )
+    const includes = allSuggestions.filter((name) =>
+      !name.toLowerCase().startsWith(q) && name.toLowerCase().includes(q)
+    )
+
+    const filtered = [...startsWith, ...includes].slice(0, 10)
 
     setFilteredSuggestions(filtered)
     setShowSuggestions(filtered.length > 0)
@@ -65,13 +77,11 @@ export function RecipeSuggestionInput({
         )
         break
       case "Enter":
-        if (highlightedIndex >= 0) {
-          e.preventDefault()
-          onChange(filteredSuggestions[highlightedIndex])
-          setShowSuggestions(false)
-          setUserTyped(false)
-          setFilteredSuggestions([])
-          setHighlightedIndex(-1)
+        e.preventDefault()
+        // If something is highlighted, select it; otherwise select the first suggestion
+        const indexToSelect = highlightedIndex >= 0 ? highlightedIndex : 0
+        if (filteredSuggestions[indexToSelect]) {
+          handleSuggestionClick(filteredSuggestions[indexToSelect])
         }
         break
       case "Escape":
@@ -109,8 +119,16 @@ export function RecipeSuggestionInput({
     <div className="relative w-full">
       <AutoResizeTextarea
         ref={inputRef}
+        id={id}
+        required={required}
         placeholder={placeholder}
         value={value}
+        onFocus={() => {
+          if (value.trim().length >= 1) {
+            setUserTyped(true)
+            setShowSuggestions(true)
+          }
+        }}
         onChange={(e) => {
           setUserTyped(true)
           onChange(e.target.value)

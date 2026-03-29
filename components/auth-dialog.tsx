@@ -51,10 +51,10 @@ export function AuthDialog({ open, onClose, onSuccess }: AuthDialogProps) {
       <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-lg">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-serif text-xl text-foreground">
-            {mode === "login" ? "Login" : "Sign Up"}
+            {mode === "login" ? "લોગિન" : "સાઇન અપ"}
           </h3>
           <Button variant="ghost" size="sm" onClick={onClose}>
-            Close
+            બંધ કરો
           </Button>
         </div>
 
@@ -68,7 +68,7 @@ export function AuthDialog({ open, onClose, onSuccess }: AuthDialogProps) {
             }}
             className="flex-1"
           >
-            Login
+            લોગિન
           </Button>
           <Button
             type="button"
@@ -79,15 +79,15 @@ export function AuthDialog({ open, onClose, onSuccess }: AuthDialogProps) {
             }}
             className="flex-1"
           >
-            Sign Up
+            સાઇન અપ
           </Button>
         </div>
 
         <div className="space-y-3">
           {mode === "signup" ? (
             <div>
-              <Label className="mb-1.5 block text-sm">Name</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+              <Label className="mb-1.5 block text-sm">નામ</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="તમારું નામ" />
             </div>
           ) : null}
 
@@ -113,17 +113,17 @@ export function AuthDialog({ open, onClose, onSuccess }: AuthDialogProps) {
 
           {mode === "signup" ? (
             <div>
-              <Label className="mb-1.5 block text-sm">Role</Label>
+              <Label className="mb-1.5 block text-sm">રોલ</Label>
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value as AuthRole)}
                 className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
               >
-                <option value="user">user</option>
-                <option value="admin">admin</option>
+                <option value="user">વપરાશકર્તા (user)</option>
+                <option value="admin">એડમિન (admin)</option>
               </select>
               <p className="mt-1 text-[11px] text-muted-foreground">
-                If you choose `admin`, existing admin approval is required before full access.
+                જો તમે એડમિન પસંદ કરશો, તો સંપૂર્ણ એક્સેસ માટે પહેલાથી રહેલા એડમિનની મંજૂરી જરૂરી છે.
               </p>
             </div>
           ) : null}
@@ -131,7 +131,7 @@ export function AuthDialog({ open, onClose, onSuccess }: AuthDialogProps) {
           {message ? <p className="text-xs text-muted-foreground">{message}</p> : null}
 
           <Button type="button" className="w-full" onClick={mode === "login" ? onLogin : onSignup}>
-            {mode === "login" ? "Login" : "Create Account"}
+            {mode === "login" ? "લોગિન" : "એકાઉન્ટ બનાવો"}
           </Button>
 
           {/* <p className="text-[11px] text-muted-foreground">

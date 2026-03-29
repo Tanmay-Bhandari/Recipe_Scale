@@ -11,11 +11,21 @@ const clientConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 }
 
-function initClientFirestore() {
+export function initClientFirestore() {
+  if (typeof window === 'undefined') return getFirestore()
+
+  const missingKeys = Object.entries(clientConfig)
+    .filter(([_, value]) => !value)
+    .map(([key]) => key)
+
+  if (missingKeys.length > 0) {
+    console.error("Firebase Initialization Error: The following keys are missing from your .env.local file:", missingKeys.join(", "))
+  }
+
   if (!getApps().length) {
-    // Minimal initialization; missing values will cause runtime errors — caller should provide env vars
     initializeApp(clientConfig)
   }
+  
   return getFirestore()
 }
 

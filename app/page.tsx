@@ -139,9 +139,22 @@ export default function Home() {
         }
       } catch (e) {}
 
+      // Priority: 1. URL Query Param (?tab=recipes), 2. LocalStorage
+      const params = new URLSearchParams(window.location.search)
+      const tabParam = params.get('tab')
       const savedTab = localStorage.getItem("recipeScaleActiveTab")
-      if (savedTab === "recipes" || savedTab === "packet" || savedTab === "daily" || savedTab === "todayMenu") {
-        setActiveTab(savedTab)
+      
+      const finalTab = (tabParam && ["recipes", "packet", "daily", "todayMenu"].includes(tabParam)) 
+        ? tabParam as any
+        : (savedTab && ["recipes", "packet", "daily", "todayMenu"].includes(savedTab))
+          ? savedTab as any
+          : "todayMenu"
+
+      setActiveTab(finalTab)
+      
+      // Clean up URL if tab param was used to avoid sticking on refresh
+      if (tabParam) {
+        window.history.replaceState({}, '', window.location.pathname)
       }
     }
 
@@ -349,7 +362,8 @@ export default function Home() {
         onSuccess={(s) => {
           setSession(s)
           setPendingAdminRequests(listPendingAdminRequests())
-          if (s.role === "admin") setActiveTab("recipes")
+          setActiveTab("todayMenu")
+          setAuthOpen(false)
         }}
       />
 
@@ -358,7 +372,7 @@ export default function Home() {
           <>
             {!isAdmin ? (
               <section className="mb-4 rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground">
-                Guest view: only `આજનું દૈનિક મેનુ` is available. Login as admin to access all options.
+                મહેમાન વ્યૂ: ફક્ત આજનું દૈનિક મેનુ ઉપલબ્ધ છે. તમામ વિકલ્પો માટે એડમિન તરીકે લોગીન કરો.
               </section>
             ) : null}
             <TodayDailyMenu recipes={recipes} />
@@ -370,12 +384,11 @@ export default function Home() {
             {/* Hero section */}
             <section className="mb-8 md:mb-12">
               <h2 className="font-serif text-3xl tracking-tight text-foreground md:text-4xl text-balance">
-                Scale any recipe to the perfect amount
+                કોઈપણ રેસીપીને યોગ્ય માત્રામાં સ્કેલ કરો
               </h2>
               <p className="mt-2 max-w-2xl text-base text-muted-foreground leading-relaxed">
-                Add your recipe with base ingredients, then use the calculator to
-                instantly scale for any batch size. Making a 10kg cake instead of
-                1kg? We handle the math.
+                બેઝ સામગ્રી સાથે તમારી રેસીપી ઉમેરો, પછી કોઈપણ બેચ સાઈઝ માટે તરત જ સ્કેલ કરવા માટે કેલ્ક્યુલેટરનો ઉપયોગ કરો. 
+                1kg ને બદલે 10kg કેક બનાવવી છે? અમે ગણતરી સંભાળીશું.
               </p>
             </section>
 
@@ -387,7 +400,7 @@ export default function Home() {
                 className="gap-2 text-base"
               >
                 <Plus className="h-5 w-5" />
-                Add New Recipe
+                નવી વાનગી ઉમેરો
               </Button>
             </section>
 
@@ -395,7 +408,7 @@ export default function Home() {
             <section>
               <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="font-serif text-xl text-foreground">
-                  Your Recipes
+                  તમારી વાનગીઓ
                   <span className="ml-2 font-sans text-sm font-normal text-muted-foreground">
                     ({filteredRecipes.length}
                     {searchQuery.trim() && ` of ${recipes.length}`})
@@ -406,7 +419,7 @@ export default function Home() {
                     <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <form autoComplete="off">
                       <Input
-                        placeholder="Search recipes or ingredients..."
+                        placeholder="વાનગી અથવા સામગ્રી શોધો..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="bg-background pl-9"
@@ -422,7 +435,7 @@ export default function Home() {
                 <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border py-12 text-center">
                   <Search className="mb-3 h-8 w-8 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
-                    {"No recipes match \""}{searchQuery}{"\""}
+                    {"\""}{searchQuery}{"\" "}સાથે કોઈ વાનગી મળી નથી
                   </p>
                 </div>
                 ) : (
@@ -442,8 +455,6 @@ export default function Home() {
                 </div>
               )}
             </section>
-
-            {/* Client-side Firestore demo removed — use server/API or scripts for deletes */}
           </>
         )}
 
@@ -452,12 +463,11 @@ export default function Home() {
             {/* Packet hero */}
             <section className="mb-8 md:mb-12">
               <h2 className="font-serif text-3xl tracking-tight text-foreground md:text-4xl text-balance">
-                Food Packet Calculator
+                ફૂડ પેકેટ કેલ્ક્યુલેટર
               </h2>
               <p className="mt-2 max-w-2xl text-base text-muted-foreground leading-relaxed">
-                Combine multiple recipes into a single food packet, set how many
-                packets you need, and get the total ingredient requirements
-                instantly.
+                મલ્ટીપલ રેસીપીને એક જ ફૂડ પેકેટમાં જોડો, તમને કેટલા પેકેટની જરૂર છે તે સેટ કરો 
+                અને તરત જ કુલ સામગ્રીની જરૂરિયાતો મેળવો.
               </p>
             </section>
 
@@ -472,7 +482,7 @@ export default function Home() {
                 દૈનિક મેનુ
               </h2>
               <p className="mt-2 max-w-2xl text-base text-muted-foreground leading-relaxed">
-                Plan your daily meals using your saved recipes.
+                તમારી સેવ કરેલી રેસીપીનો ઉપયોગ કરીને તમારા દૈનિક ભોજનનું આયોજન કરો.
               </p>
             </section>
 
@@ -483,7 +493,7 @@ export default function Home() {
 
       <footer className="border-t border-border py-6 text-center text-sm text-muted-foreground">
         <p>
-          {"RecipeScale \u2014 Built for chefs who love precision."}
+          {"RecipeScale — ચોકસાઈ પસંદ કરતા શેફ માટે બનાવેલ છે."}
         </p>
       </footer>
     </div>

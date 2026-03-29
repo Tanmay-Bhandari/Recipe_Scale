@@ -4,84 +4,104 @@ import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea"
 import { cn } from "@/lib/utils"
 
 const COMMON_INGREDIENTS = [
-  "Flour",
-  "Sugar",
-  "Butter",
-  "Eggs",
-  "Milk",
-  "Baking Powder",
-  "Baking Soda",
-  "Salt",
-  "Vanilla Extract",
-  "Cocoa Powder",
-  "Chocolate",
-  "Almonds",
-  "Walnuts",
-  "Pecans",
-  "Oats",
-  "Honey",
-  "Oil",
-  "Coconut Oil",
-  "Olive Oil",
-  "Cream",
-  "Yogurt",
-  "Cheese",
-  "Yeast",
-  "Cinnamon",
-  "Nutmeg",
-  "Ginger",
-  "Lemon",
-  "Orange",
-  "Vanilla Bean",
-  "Caramel",
-  "Coffee",
-  "Matcha",
-  "Sesame",
-  "Peanut Butter",
-  "Almond Butter",
-  "Dates",
-  "Raisins",
-  "Blueberries",
-  "Strawberries",
-  "Raspberries",
-  "Bananas",
-  "Apples",
-  "Pumpkin",
-  "Carrot",
-  "Zucchini",
-  "Spinach",
-  "Garlic",
-  "Onion",
-  "Tomato",
-  "Bell Pepper",
-  "Basil",
-  "Thyme",
-  "Rosemary",
-  "Oregano",
-  "Cumin",
-  "Paprika",
-  "Black Pepper",
-  "Chili",
-  "Mustard",
-  "Soy Sauce",
-  "Fish Sauce",
-  "Vinegar",
-  "Lemon Juice",
-  "Lime Juice",
-  "Balsamic Vinegar",
-  "Rice",
-  "Pasta",
-  "Bread",
-  "Chickpea",
-  "Lentil",
-  "Beef",
-  "Chicken",
-  "Pork",
-  "Fish",
-  "Salmon",
-  "Shrimp",
-  "Tofu",
-  "Tempeh",
+  "મેંદો",
+  "લોટ",
+  "ઘઉંનો લોટ",
+  "ચણાનો લોટ",
+  "ખાંડ",
+  "ગોળ",
+  "તેલ",
+  "ઘી",
+  "મીઠું",
+  "પાણી",
+  "દૂધ",
+  "દહીં",
+  "મરચું",
+  "લીલા મરચાં",
+  "આદુ",
+  "લસણ",
+  "ડુંગળી",
+  "બટાકા",
+  "ટામેટા",
+  "કોથમીર",
+  "જીરું",
+  "હળદર",
+  "રાઈ",
+  "મેથી",
+  "હીંગ",
+  "લીમડો",
+  "વરિયાળી",
+  "તજ",
+  "લવિંગ",
+  "એલચી",
+  "મરી",
+  "ફુદીનો",
+  "પનીર",
+  "માખણ",
+  "સોજી",
+  "રવો",
+  "બેસન",
+  "ચોખા",
+  "પૌંઆ",
+  "મમરા",
+  "શીંગદાણા",
+  "તલ",
+  "અજમો",
+  "સૂંઠ",
+  "તુલસી",
+  "કેસર",
+  "પ્રેમવતી સ્પ. મસાલા",
+  "મેથીના બીજ",
+  "વટાણા",
+  "ફલાવર",
+  "કોબીજ",
+  "ભીંડા",
+  "રીંગણ",
+  "દુધી",
+  "ટીંડોરા",
+  "પરવળ",
+  "ગલકા",
+  "ચોળી",
+  "તુવેર",
+  "મગ",
+  "ચણા",
+  "વાલ",
+  "લીલવા",
+  "રાજમા",
+  "સોયાબીન",
+  "પાલક",
+  "મેથીની ભાજી",
+  "કેપ્સીકમ",
+  "ગાજર",
+  "કાકડી",
+  "લીંબુ",
+  "કઢી લીમડો",
+  "તેજપત્તા",
+  "મગફળી",
+  "કાજુ",
+  "બદામ",
+  "કિસમિસ",
+  "પિસ્તા",
+  "ચારોળી",
+  "સૂકું કોપરું",
+  "કોપરાનું છીણ",
+  "ખસખસ",
+  "મિક્સ મસાલો",
+  "ગરમ મસાલો",
+  "ધાણાજીરું",
+  "આમચૂર પાવડર",
+  "ચાટ મસાલો",
+  "કસ્તૂરી મેથી",
+  "તવી મસાલો",
+  "પાઉંભાજી મસાલો",
+  "ચોકલેટ પાવડર",
+  "કોકો પાવડર",
+  "બેકિંગ પાવડર",
+  "બેકિંગ સોડા",
+  "યીસ્ટ",
+  "કન્ડેન્સ્ડ મિલ્ક",
+  "ક્રીમ",
+  "પેરી પેરી મસાલો",
 ]
 
 interface IngredientInputProps {
@@ -96,7 +116,7 @@ interface IngredientInputProps {
 export function IngredientInput({
   value,
   onChange,
-  placeholder = "e.g. Flour",
+  placeholder = "દા.ત. મેંદો",
   className,
   disabled = false,
   previousIngredients = [],
@@ -119,20 +139,26 @@ export function IngredientInput({
       ing => !previousSet.has(ing.toLowerCase())
     )
     
-    return [...uniquePrevious, ...remaining]
+    // Sort combined list locale-aware
+    return [...uniquePrevious, ...remaining].sort((a, b) => a.localeCompare(b, 'gu'))
   }, [previousIngredients])
 
   useEffect(() => {
-    // Only show suggestions if the user has actively typed and value length is reasonable
-    if (!userTyped || value.trim().length < 2) {
+    // Only show suggestions if the user has actively typed or it is focused with some value
+    if ((!userTyped && !showSuggestions) || value.trim().length < 1) {
       setFilteredSuggestions([])
       setShowSuggestions(false)
       return
     }
 
-    const filtered = allSuggestions.filter((ing) =>
-      ing.toLowerCase().includes(value.toLowerCase())
-    ).slice(0, 6)
+    const q = value.toLowerCase()
+    // Prioritize "starts with" then "includes"
+    const startsWith = allSuggestions.filter(ing => ing.toLowerCase().startsWith(q))
+    const includes = allSuggestions.filter(ing => 
+      !ing.toLowerCase().startsWith(q) && ing.toLowerCase().includes(q)
+    )
+
+    const filtered = [...startsWith, ...includes].slice(0, 8)
 
     setFilteredSuggestions(filtered)
     setShowSuggestions(filtered.length > 0)
@@ -203,6 +229,12 @@ export function IngredientInput({
         ref={inputRef as any}
         placeholder={placeholder}
         value={value}
+        onFocus={() => {
+          if (value.trim().length >= 1) {
+            setUserTyped(true)
+            setShowSuggestions(true)
+          }
+        }}
         onChange={(e) => {
           setUserTyped(true)
           onChange(e.target.value)

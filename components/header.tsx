@@ -42,7 +42,7 @@ export function Header({
                 RecipeScale
               </h1>
               <p className="hidden text-xs text-muted-foreground md:block">
-                Scale your recipes perfectly
+                તમારી રેસીપીને ચોકસાઈથી સ્કેલ કરો
               </p>
             </div>
           </div>
@@ -67,10 +67,10 @@ export function Header({
                     {notifOpen ? (
                       <div className="absolute right-0 top-11 z-50 w-80 rounded-lg border border-border bg-card p-3 shadow-xl">
                         <p className="mb-2 text-sm font-semibold text-foreground">
-                          Admin Role Requests
+                          એડમિન રોલ વિનંતીઓ
                         </p>
                         {pendingAdminRequests.length === 0 ? (
-                          <p className="text-xs text-muted-foreground">No pending requests.</p>
+                          <p className="text-xs text-muted-foreground">કોઈ બાકી વિનંતી નથી.</p>
                         ) : (
                           <div className="space-y-2">
                             {pendingAdminRequests.map((req) => (
@@ -86,10 +86,10 @@ export function Header({
                                     variant="outline"
                                     onClick={() => onRejectAdminRequest(req.id)}
                                   >
-                                    Reject
+                                    નકારો
                                   </Button>
                                   <Button size="sm" onClick={() => onApproveAdminRequest(req.id)}>
-                                    Approve
+                                    મંજૂરી આપો
                                   </Button>
                                 </div>
                               </div>
@@ -101,12 +101,12 @@ export function Header({
                   </div>
                 ) : null}
                 <Button variant="outline" size="sm" onClick={onLogoutClick}>
-                  Logout
+                  લોગઆઉટ
                 </Button>
               </>
             ) : (
               <Button size="sm" onClick={onAuthClick}>
-                Login / Sign Up
+                લોગીન / સાઇન અપ
               </Button>
             )}
           </div>
@@ -117,30 +117,6 @@ export function Header({
           <nav className="-mb-px flex min-w-max gap-1" aria-label="Main navigation">
           {isAdmin ? (
             <>
-              <button
-                suppressHydrationWarning
-                onClick={() => onTabChange("recipes")}
-                className={`flex items-center gap-2 rounded-t-lg border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-                  activeTab === "recipes"
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
-                }`}
-              >
-                <CakeSlice className="h-4 w-4" />
-                Recipes
-              </button>
-              <button
-                suppressHydrationWarning
-                onClick={() => onTabChange("packet")}
-                className={`flex items-center gap-2 rounded-t-lg border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-                  activeTab === "packet"
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
-                }`}
-              >
-                <Package className="h-4 w-4" />
-                Food Packet Calculator
-              </button>
               <button
                 suppressHydrationWarning
                 onClick={() => onTabChange("todayMenu")}
@@ -164,6 +140,30 @@ export function Header({
               >
                 <CalendarDays className="h-4 w-4" />
                 દૈનિક મેનુ
+              </button>
+              <button
+                suppressHydrationWarning
+                onClick={() => onTabChange("recipes")}
+                className={`flex items-center gap-2 rounded-t-lg border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                  activeTab === "recipes"
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
+                }`}
+              >
+                <CakeSlice className="h-4 w-4" />
+                વાનગી લિસ્ટ
+              </button>
+              <button
+                suppressHydrationWarning
+                onClick={() => onTabChange("packet")}
+                className={`flex items-center gap-2 rounded-t-lg border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                  activeTab === "packet"
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
+                }`}
+              >
+                <Package className="h-4 w-4" />
+                ફૂડ પેકેટ કેલ્ક્યુલેટર
               </button>
             </>
           ) : (
