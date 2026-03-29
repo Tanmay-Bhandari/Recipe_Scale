@@ -1,8 +1,0 @@
-{
-  "projects": {
-    "default": "recipescale-4ba26"
-  },
-  "firestore": {
-    "rules": "firestore.rules"
-  }
-}
