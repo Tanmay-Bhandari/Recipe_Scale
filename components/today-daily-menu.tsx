@@ -140,12 +140,11 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
           </thead>
           <tbody className="divide-y divide-border/60">
             {itemsToRender.map((it) => {
-              const isBreakfast = selectedMeal === 'breakfast'
-              const typedName = (isBreakfast ? "" : it.value?.trim()) ?? ""
               const hasQty = Number.isFinite(it.quantity) && it.quantity > 0
-              const matchingRecipe = recipes.find(r =>
-                r.name.toLowerCase() === (isBreakfast ? it.name : typedName).toLowerCase()
-              )
+              const recipeName = (it.name || "").trim()
+              const matchingRecipe = recipeName
+                ? recipes.find(r => r.name.toLowerCase() === recipeName.toLowerCase())
+                : undefined
               const isExpanded = expandedItems[it.id]
 
               return (
