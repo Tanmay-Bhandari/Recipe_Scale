@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server'
 import initFirebaseAdmin from '@/lib/firebaseAdmin'
 import applyCorsHeaders from '@/lib/cors'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl

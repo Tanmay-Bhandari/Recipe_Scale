@@ -113,12 +113,13 @@ export default function Home() {
   const [focusedRecipeId, setFocusedRecipeId] = useState<string | null>(null)
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<"todayMenu" | "recipes" | "packet" | "daily">("todayMenu")
+  const [isLoaded, setIsLoaded] = useState(false)
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && isLoaded) {
       localStorage.setItem("recipeScaleActiveTab", activeTab)
     }
-  }, [activeTab])
+  }, [activeTab, isLoaded])
   const [session, setSession] = useState<AuthSession | null>(null)
   const [authOpen, setAuthOpen] = useState(false)
   const [pendingAdminRequests, setPendingAdminRequests] = useState<AdminApprovalRequest[]>([])
@@ -126,7 +127,6 @@ export default function Home() {
   const recipesRef = useRef<HTMLDivElement | null>(null)
   const { toast } = useToast()
   const isAdmin = session?.role === "admin"
-  const [isLoaded, setIsLoaded] = useState(false)
 
   useEffect(() => {
     // Load state from localStorage on mount (prevents hydration mismatch)
@@ -137,21 +137,21 @@ export default function Home() {
           const parsed = JSON.parse(rawRecipes)
           if (Array.isArray(parsed) && parsed.length > 0) setRecipes(parsed)
         }
-      } catch (e) {}
+      } catch (e) { }
 
       // Priority: 1. URL Query Param (?tab=recipes), 2. LocalStorage
       const params = new URLSearchParams(window.location.search)
       const tabParam = params.get('tab')
       const savedTab = localStorage.getItem("recipeScaleActiveTab")
-      
-      const finalTab = (tabParam && ["recipes", "packet", "daily", "todayMenu"].includes(tabParam)) 
+
+      const finalTab = (tabParam && ["recipes", "packet", "daily", "todayMenu"].includes(tabParam))
         ? tabParam as any
         : (savedTab && ["recipes", "packet", "daily", "todayMenu"].includes(savedTab))
           ? savedTab as any
           : "todayMenu"
 
       setActiveTab(finalTab)
-      
+
       // Clean up URL if tab param was used to avoid sticking on refresh
       if (tabParam) {
         window.history.replaceState({}, '', window.location.pathname)
@@ -170,7 +170,7 @@ export default function Home() {
       setActiveTab("todayMenu")
     }
   }, [isLoaded, isAdmin, activeTab])
-  
+
   const loadRecipes = useCallback(async () => {
     let localFound = false
     try {
@@ -184,10 +184,10 @@ export default function Home() {
           }
         }
       }
-    } catch (e) {}
+    } catch (e) { }
 
     const loadingToast = localFound ? null : toast({ title: "Loading recipes", description: "Contacting backend..." })
-    
+
     try {
       const data = await api.listRecipes()
       if (!data) {
@@ -214,7 +214,7 @@ export default function Home() {
         setRecipes(newRecipes)
         if (typeof window !== "undefined") localStorage.setItem("recipes", JSON.stringify(newRecipes))
       }
-      
+
       if (loadingToast) loadingToast.update({ id: loadingToast.id, title: "Loaded", description: "Recipes loaded from backend", open: true })
     } catch (err: any) {
       console.warn("Silent sync failed, using local data:", err?.message || String(err))
@@ -375,7 +375,7 @@ export default function Home() {
                 મહેમાન વ્યૂ: ફક્ત આજનું દૈનિક મેનુ ઉપલબ્ધ છે. તમામ વિકલ્પો માટે એડમિન તરીકે લોગીન કરો.
               </section>
             ) : null}
-            <TodayDailyMenu recipes={recipes} />
+            <TodayDailyMenu recipes={recipes} isAdmin={isAdmin} />
           </>
         )}
 
@@ -387,7 +387,7 @@ export default function Home() {
                 કોઈપણ રેસીપીને યોગ્ય માત્રામાં સ્કેલ કરો
               </h2>
               <p className="mt-2 max-w-2xl text-base text-muted-foreground leading-relaxed">
-                બેઝ સામગ્રી સાથે તમારી રેસીપી ઉમેરો, પછી કોઈપણ બેચ સાઈઝ માટે તરત જ સ્કેલ કરવા માટે કેલ્ક્યુલેટરનો ઉપયોગ કરો. 
+                બેઝ સામગ્રી સાથે તમારી રેસીપી ઉમેરો, પછી કોઈપણ બેચ સાઈઝ માટે તરત જ સ્કેલ કરવા માટે કેલ્ક્યુલેટરનો ઉપયોગ કરો.
                 1kg ને બદલે 10kg કેક બનાવવી છે? અમે ગણતરી સંભાળીશું.
               </p>
             </section>
@@ -438,14 +438,14 @@ export default function Home() {
                     {"\""}{searchQuery}{"\" "}સાથે કોઈ વાનગી મળી નથી
                   </p>
                 </div>
-                ) : (
+              ) : (
                 <div className="space-y-4" ref={recipesRef}>
                   {filteredRecipes.map((recipe) => (
                     <RecipeCard
                       key={recipe.id}
                       recipe={recipe}
                       onDelete={deleteRecipe}
-                        onEdit={() => router.push(`/recipes/${recipe.id}/edit`)}
+                      onEdit={() => router.push(`/recipes/${recipe.id}/edit`)}
                       isDimmed={focusedRecipeId !== null && focusedRecipeId !== recipe.id}
                       onFocusToggle={() =>
                         setFocusedRecipeId((prev) => (prev === recipe.id ? null : recipe.id))
@@ -466,7 +466,7 @@ export default function Home() {
                 ફૂડ પેકેટ કેલ્ક્યુલેટર
               </h2>
               <p className="mt-2 max-w-2xl text-base text-muted-foreground leading-relaxed">
-                મલ્ટીપલ રેસીપીને એક જ ફૂડ પેકેટમાં જોડો, તમને કેટલા પેકેટની જરૂર છે તે સેટ કરો 
+                મલ્ટીપલ રેસીપીને એક જ ફૂડ પેકેટમાં જોડો, તમને કેટલા પેકેટની જરૂર છે તે સેટ કરો
                 અને તરત જ કુલ સામગ્રીની જરૂરિયાતો મેળવો.
               </p>
             </section>

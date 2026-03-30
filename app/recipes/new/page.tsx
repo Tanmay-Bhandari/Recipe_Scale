@@ -13,7 +13,6 @@ export default function NewRecipePage() {
       <h1 className="mb-6 font-serif text-2xl">નવી વાનગી ઉમેરો</h1>
       <RecipeForm
         onAdd={(recipe) => {
-          // notify main page to reload recipes
           try { window.dispatchEvent(new Event('recipesSaved')) } catch (e) {}
           toast({ title: 'સેવ સફળ', description: 'રેસીપી સફળતાપૂર્વક પૂર્વક સેવ કરી છે' })
           if (typeof window !== 'undefined') localStorage.setItem("recipeScaleActiveTab", "recipes")

@@ -5,7 +5,6 @@ import { CalendarDays, ChevronDown, ChevronUp, Utensils, Info, CloudOff } from "
 import { Button } from "@/components/ui/button"
 import {
   getTodayKey,
-  loadDayMenu,
   loadDayMenuFromFirestore,
   saveDayMenuToFirestore,
   type DailyMenuState,
@@ -21,7 +20,7 @@ const TITLES: Record<MealType, string> = {
   dinner: "રાત્રી ભોજન",
 }
 
-export function TodayDailyMenu({ recipes = [] }: { recipes?: Recipe[] }) {
+export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Recipe[]; isAdmin?: boolean }) {
   const [dayKey, setDayKey] = useState<string>(getTodayKey())
   const [menu, setMenu] = useState<DailyMenuState | null>(null)
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({})
@@ -37,26 +36,20 @@ export function TodayDailyMenu({ recipes = [] }: { recipes?: Recipe[] }) {
     setIsLoading(true)
     setIsOffline(false)
     try {
-      // 1. Try local first for instant feedback
-      const local = loadDayMenu(targetDay)
-      if (local) setMenu(local)
-
-      // 2. Always check Firestore for the latest source of truth
-      console.log(`Checking Firestore for: ${targetDay}`)
+      console.log(`Checking API for: ${targetDay}`)
       const cloud = await loadDayMenuFromFirestore(targetDay)
-      
+
       if (cloud) {
         setMenu(cloud)
         setIsOffline(false)
-      } else if (!local) {
-        // Only set to null if we found NOTHING in either local or cloud
+      } else {
         setMenu(null)
       }
     } catch (err: any) {
       console.error("Refresh failed:", err)
       // Check if it's an offline error
       if (err.message?.includes('offline') || err.code === 'unavailable') {
-         setIsOffline(true)
+        setIsOffline(true)
       }
     } finally {
       setIsLoading(false)
@@ -65,18 +58,18 @@ export function TodayDailyMenu({ recipes = [] }: { recipes?: Recipe[] }) {
 
   async function updateItemField(mealType: MealType, itemId: string, fieldUpdates: Partial<DailyMenuItem>) {
     if (!menu) return
-    
+
     // Update local state for immediate feedback
     const updatedMenu = { ...menu }
     const meal = updatedMenu.meals[mealType]
     const itemIdx = meal.items.findIndex(i => i.id === itemId)
-    
+
     if (itemIdx !== -1) {
       const items = [...meal.items]
       items[itemIdx] = { ...items[itemIdx], ...fieldUpdates }
       updatedMenu.meals[mealType].items = items
       setMenu({ ...updatedMenu })
-      
+
       // Save to Firestore
       try {
         await saveDayMenuToFirestore(dayKey, updatedMenu)
@@ -88,22 +81,22 @@ export function TodayDailyMenu({ recipes = [] }: { recipes?: Recipe[] }) {
 
   async function updateMetricField(mealType: MealType, field: "calories" | "categories" | "maximum" | "totalOverride", newValue: string) {
     if (!menu) return
-    
+
     // Update local state for immediate feedback
     const updatedMenu = { ...menu }
     const meal = updatedMenu.meals[mealType]
-    
+
     // Update the specific field
     meal[field] = newValue
-    
+
     // Calculate totalOverride automatically (based on VIP + STAFF + GUEST)
     const vip = parseInt(meal.calories || "0", 10) || 0
     const staff = parseInt(meal.categories || "0", 10) || 0
     const guest = parseInt(meal.maximum || "0", 10) || 0
     meal.totalOverride = String(vip + staff + guest)
-    
+
     setMenu({ ...updatedMenu })
-    
+
     // Save to Firestore
     try {
       await saveDayMenuToFirestore(dayKey, updatedMenu)
@@ -125,13 +118,13 @@ export function TodayDailyMenu({ recipes = [] }: { recipes?: Recipe[] }) {
     const textColor = isBlue ? "text-blue-600" : "text-primary"
     const dotColor = isBlue ? "bg-blue-500" : "bg-primary"
     const borderColor = isBlue ? "border-blue-200/60" : "border-border/60"
-    
+
     return (
       <div className={`relative overflow-x-auto rounded-xl border border-border bg-background shadow-sm animate-in fade-in transition-all duration-500 ${isBlue ? 'ring-1 ring-blue-100/30' : ''}`}>
         {title && (
           <div className={`${headerBg} px-5 py-3 border-b ${borderColor}`}>
-            <h4 className={`text-lg font-bold ${textColor} flex items-center gap-2.5`}>
-              <span className={`w-2 h-2 rounded-full ${dotColor} shadow-sm`} />
+            <h4 className={`text-xl font-bold ${textColor} flex items-center gap-2.5`}>
+              <span className={`w-2.5 h-2.5 rounded-full ${dotColor} shadow-sm`} />
               {title}
             </h4>
           </div>
@@ -150,7 +143,7 @@ export function TodayDailyMenu({ recipes = [] }: { recipes?: Recipe[] }) {
               const isBreakfast = selectedMeal === 'breakfast'
               const typedName = (isBreakfast ? "" : it.value?.trim()) ?? ""
               const hasQty = Number.isFinite(it.quantity) && it.quantity > 0
-              const matchingRecipe = recipes.find(r => 
+              const matchingRecipe = recipes.find(r =>
                 r.name.toLowerCase() === (isBreakfast ? it.name : typedName).toLowerCase()
               )
               const isExpanded = expandedItems[it.id]
@@ -159,7 +152,7 @@ export function TodayDailyMenu({ recipes = [] }: { recipes?: Recipe[] }) {
                 <Fragment key={it.id}>
                   <tr className={`group ${isBlue ? 'hover:bg-blue-50/5' : 'hover:bg-muted/5'} transition-colors`}>
                     <td className="p-4 align-top border-r border-border/30 bg-muted/5 min-h-[60px]">
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         {it.label && (
                           <div className={`text-xs font-extrabold uppercase tracking-widest ${isBlue ? 'text-blue-500/80' : 'text-primary/70'}`}>
                             {it.label}
@@ -168,24 +161,22 @@ export function TodayDailyMenu({ recipes = [] }: { recipes?: Recipe[] }) {
                         <div className="text-lg font-bold text-foreground leading-snug break-words">
                           {it.name || "-"}
                         </div>
-                      </div>
-                    </td>
-                    <td className="p-4 align-middle border-r border-border/30 text-center">
-                      <div className="flex flex-col items-center gap-2 px-2">
-                        <span className="text-lg font-medium text-foreground break-words text-center block w-full">{it.value || "-"}</span>
-                        {matchingRecipe && hasQty && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                        {isAdmin && matchingRecipe && hasQty && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={(e) => toggleItem(it.id, e)}
-                            className={`h-9 px-4 gap-2 text-sm font-bold uppercase tracking-wider ${isBlue ? 'text-blue-600 bg-blue-50 hover:bg-blue-100' : 'text-primary bg-primary/5 hover:bg-primary/10'}`}
+                            className={`h-7 px-3 gap-1.5 text-xs font-bold uppercase tracking-wider rounded-lg ${isBlue ? 'text-blue-600 bg-blue-50 hover:bg-blue-100' : 'text-primary bg-primary/8 hover:bg-primary/15'}`}
                           >
-                            <Utensils className="h-4 w-4" />
+                            <Utensils className="h-3.5 w-3.5" />
                             રેસીપી
-                            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                           </Button>
                         )}
                       </div>
+                    </td>
+                    <td className="p-4 align-middle border-r border-border/30 text-center">
+                      <span className="text-lg font-medium text-foreground break-words text-center block w-full">{it.value || "-"}</span>
                     </td>
                     <td className="p-4 align-middle border-r border-border/30 text-center">
                       {hasQty ? (
@@ -196,39 +187,39 @@ export function TodayDailyMenu({ recipes = [] }: { recipes?: Recipe[] }) {
                       ) : "-"}
                     </td>
                     <td className="p-4 align-middle text-center">
-                      <div className="flex items-center gap-0 w-fit mx-auto bg-background rounded-xl border border-border/50 shadow-sm group focus-within:ring-1 focus-within:ring-primary/30 h-11 overflow-hidden">
+                      <div className="flex items-center gap-0 w-fit mx-auto bg-background rounded-lg border border-border/50 shadow-sm group focus-within:ring-1 focus-within:ring-primary/30 h-9 overflow-hidden">
                         <Input
                           type="number"
                           value={it.adjustment ?? ""}
                           onChange={(e) => updateItemField(selectedMeal, it.id, { adjustment: e.target.value })}
-                          className="w-16 h-full border-none text-center font-bold text-xl p-0 focus-visible:ring-0 shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none bg-transparent"
+                          className="w-10 h-full border-none text-center font-bold text-sm p-0 focus-visible:ring-0 shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none bg-transparent"
                         />
                         <div className="flex flex-col border-l border-border/50 h-full">
                           <button
                             type="button"
-                            className="flex-1 px-2.5 hover:bg-muted/50 flex items-center justify-center border-b border-border/30 text-muted-foreground hover:text-foreground transition-all active:bg-muted"
+                            className="flex-1 px-1.5 hover:bg-muted/50 flex items-center justify-center border-b border-border/30 text-muted-foreground hover:text-foreground transition-all active:bg-muted"
                             onClick={() => {
                               const current = parseInt(it.adjustment || "0", 10) || 0
                               updateItemField(selectedMeal, it.id, { adjustment: String(current + 1) })
                             }}
                           >
-                            <ChevronUp className="h-4 w-4" />
+                            <ChevronUp className="h-3 w-3" />
                           </button>
                           <button
                             type="button"
-                            className="flex-1 px-2.5 hover:bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground transition-all active:bg-muted"
+                            className="flex-1 px-1.5 hover:bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground transition-all active:bg-muted"
                             onClick={() => {
                               const current = parseInt(it.adjustment || "0", 10) || 0
                               updateItemField(selectedMeal, it.id, { adjustment: String(current - 1) })
                             }}
                           >
-                            <ChevronDown className="h-4 w-4" />
+                            <ChevronDown className="h-3 w-3" />
                           </button>
                         </div>
                         <select
                           value={it.adjustmentUnit || ""}
                           onChange={(e) => updateItemField(selectedMeal, it.id, { adjustmentUnit: e.target.value })}
-                          className="h-full border-l border-border/50 bg-background px-2 text-[10px] font-bold focus:ring-0 focus:outline-none hover:bg-muted/30 transition-colors w-[70px] appearance-none text-center outline-none"
+                          className="h-full border-l border-border/50 bg-background px-1 text-[9px] font-bold focus:ring-0 focus:outline-none hover:bg-muted/30 transition-colors w-[52px] appearance-none text-center outline-none"
                         >
                           <option value="">-</option>
                           {["કુંડી", "ડોલ", "ટબ", "કેરેટ", "કેન", "બોક્સ"].map((u) => (
@@ -238,8 +229,8 @@ export function TodayDailyMenu({ recipes = [] }: { recipes?: Recipe[] }) {
                       </div>
                     </td>
                   </tr>
-                  
-                  {matchingRecipe && hasQty && isExpanded && (
+
+                  {isAdmin && matchingRecipe && hasQty && isExpanded && (
                     <tr className="bg-muted/10">
                       <td colSpan={4} className="p-0 border-b border-border/50">
                         <div className={`overflow-hidden rounded-b-lg border-x ${isBlue ? 'border-blue-100 bg-blue-50/30' : 'border-primary/10 bg-primary/5 shadow-inner'}`}>
@@ -301,7 +292,7 @@ export function TodayDailyMenu({ recipes = [] }: { recipes?: Recipe[] }) {
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                 )}
               </div>
-              
+
               {isOffline && (
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-600 text-[10px] font-bold uppercase tracking-wider shadow-sm animate-pulse">
                   <CloudOff className="h-3 w-3" />
@@ -360,11 +351,10 @@ export function TodayDailyMenu({ recipes = [] }: { recipes?: Recipe[] }) {
               <button
                 key={mt}
                 onClick={() => setSelectedMeal(mt)}
-                className={`flex-1 rounded-xl px-4 py-3 text-base font-bold transition-all duration-200 ${
-                  selectedMeal === mt
+                className={`flex-1 rounded-xl px-4 py-3 text-base font-bold transition-all duration-200 ${selectedMeal === mt
                     ? "bg-white text-primary shadow-lg ring-1 ring-border/10 translate-y-[-2px]"
                     : "text-muted-foreground hover:text-foreground hover:bg-background/40"
-                }`}
+                  }`}
               >
                 {TITLES[mt]}
               </button>
@@ -372,66 +362,66 @@ export function TodayDailyMenu({ recipes = [] }: { recipes?: Recipe[] }) {
           </div>
 
           <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-md">
-             {/* Meal Metrics Header - INTERACTIVE */}
-             <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-border bg-muted/5 border-b border-border">
-                <div className="p-4 text-center space-y-1">
-                   <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">વી.આઇ.પી.</p>
-                   <Input
-                      type="number"
-                      value={menu.meals[selectedMeal].calories || "0"}
-                      onChange={(e) => updateMetricField(selectedMeal, "calories", e.target.value)}
-                      className="h-10 bg-transparent text-center text-xl font-bold border-none shadow-none focus-visible:ring-0"
-                   />
-                </div>
-                <div className="p-4 text-center space-y-1">
-                   <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">સ્ટાફ</p>
-                   <Input
-                      type="number"
-                      value={menu.meals[selectedMeal].categories || "0"}
-                      onChange={(e) => updateMetricField(selectedMeal, "categories", e.target.value)}
-                      className="h-10 bg-transparent text-center text-xl font-bold border-none shadow-none focus-visible:ring-0"
-                   />
-                </div>
-                <div className="p-4 text-center space-y-1">
-                   <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">મહેમાન</p>
-                   <Input
-                      type="number"
-                      value={menu.meals[selectedMeal].maximum || "0"}
-                      onChange={(e) => updateMetricField(selectedMeal, "maximum", e.target.value)}
-                      className="h-10 bg-transparent text-center text-xl font-bold border-none shadow-none focus-visible:ring-0"
-                   />
-                </div>
-                <div className="p-4 text-center space-y-1 bg-primary/[0.03]">
-                   <p className="text-[10px] font-extrabold uppercase tracking-widest text-primary">કુલ</p>
-                   <Input
-                      type="number"
-                      value={menu.meals[selectedMeal].totalOverride || "0"}
-                      onChange={(e) => updateMetricField(selectedMeal, "totalOverride", e.target.value)}
-                      className="h-10 bg-transparent text-center text-2xl font-black text-primary border-none shadow-none focus-visible:ring-0"
-                   />
-                </div>
-             </div>
+            {/* Meal Metrics Header - INTERACTIVE */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-border bg-muted/5 border-b border-border">
+              <div className="p-4 text-center space-y-1">
+                <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">વી.આઇ.પી.</p>
+                <Input
+                  type="number"
+                  value={menu.meals[selectedMeal].calories || "0"}
+                  onChange={(e) => updateMetricField(selectedMeal, "calories", e.target.value)}
+                  className="h-10 bg-transparent text-center text-xl font-bold border-none shadow-none focus-visible:ring-0"
+                />
+              </div>
+              <div className="p-4 text-center space-y-1">
+                <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">સ્ટાફ</p>
+                <Input
+                  type="number"
+                  value={menu.meals[selectedMeal].categories || "0"}
+                  onChange={(e) => updateMetricField(selectedMeal, "categories", e.target.value)}
+                  className="h-10 bg-transparent text-center text-xl font-bold border-none shadow-none focus-visible:ring-0"
+                />
+              </div>
+              <div className="p-4 text-center space-y-1">
+                <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">મહેમાન</p>
+                <Input
+                  type="number"
+                  value={menu.meals[selectedMeal].maximum || "0"}
+                  onChange={(e) => updateMetricField(selectedMeal, "maximum", e.target.value)}
+                  className="h-10 bg-transparent text-center text-xl font-bold border-none shadow-none focus-visible:ring-0"
+                />
+              </div>
+              <div className="p-4 text-center space-y-1 bg-primary/[0.03]">
+                <p className="text-[10px] font-extrabold uppercase tracking-widest text-primary">કુલ</p>
+                <Input
+                  type="number"
+                  value={menu.meals[selectedMeal].totalOverride || "0"}
+                  onChange={(e) => updateMetricField(selectedMeal, "totalOverride", e.target.value)}
+                  className="h-10 bg-transparent text-center text-2xl font-black text-primary border-none shadow-none focus-visible:ring-0"
+                />
+              </div>
+            </div>
 
-             <div className="p-6 md:p-8 bg-background/50">
-                {(() => {
-                  const meal = menu.meals[selectedMeal]
-                  const items = meal.items
-                  const isMainMeal = (selectedMeal === "lunch" || selectedMeal === "dinner")
-                  
-                  if (isMainMeal) {
-                    const thakorjiItems = items.filter(it => it.label?.includes("ઠાકોરજી"))
-                    const generalItems = items.filter(it => !it.label?.includes("ઠાકોરજી"))
-                    
-                    return (
-                      <div className="space-y-12">
-                        {renderTable(thakorjiItems, "ઠાકોરજી માટે", "orange")}
-                        {renderTable(generalItems, "જેનરલ", "blue")}
-                      </div>
-                    )
-                  }
-                  return renderTable(items)
-                })()}
-             </div>
+            <div className="p-6 md:p-8 bg-background/50">
+              {(() => {
+                const meal = menu.meals[selectedMeal]
+                const items = meal.items
+                const isMainMeal = (selectedMeal === "lunch" || selectedMeal === "dinner")
+
+                if (isMainMeal) {
+                  const thakorjiItems = items.filter(it => it.label?.includes("ઠાકોરજી"))
+                  const generalItems = items.filter(it => !it.label?.includes("ઠાકોરજી"))
+
+                  return (
+                    <div className="space-y-12">
+                      {renderTable(thakorjiItems, "ઠાકોરજી માટે", "orange")}
+                      {renderTable(generalItems, "જેનરલ", "blue")}
+                    </div>
+                  )
+                }
+                return renderTable(items)
+              })()}
+            </div>
           </div>
         </section>
       )}

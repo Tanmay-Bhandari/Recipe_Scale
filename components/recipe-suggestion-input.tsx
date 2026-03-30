@@ -148,7 +148,10 @@ export function RecipeSuggestionInput({
             <button
               key={suggestion}
               type="button"
-              onClick={() => handleSuggestionClick(suggestion)}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleSuggestionClick(suggestion);
+              }}
               className={cn(
                 "w-full px-3 py-2 text-left text-sm transition-colors hover:bg-primary/10",
                 highlightedIndex === index && "bg-primary/10 text-primary font-medium"

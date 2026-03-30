@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -53,8 +54,8 @@ export function AuthDialog({ open, onClose, onSuccess }: AuthDialogProps) {
           <h3 className="font-serif text-xl text-foreground">
             {mode === "login" ? "લોગિન" : "સાઇન અપ"}
           </h3>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            બંધ કરો
+          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+            <X className="h-4 w-4" />
           </Button>
         </div>
 

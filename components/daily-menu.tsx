@@ -11,9 +11,7 @@ import { COMMON_SUGGESTIONS } from "@/lib/suggestions"
 import type { Recipe } from "@/lib/types"
 import {
   getTodayKey,
-  listSavedDays,
-  loadDayMenu,
-  saveDayMenu,
+  listSavedDaysApi,
   saveDayMenuToFirestore,
   loadDayMenuFromFirestore,
   type DailyMenuItem,
@@ -196,8 +194,11 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
   const [selectedMeal, setSelectedMeal] = useState<MealType>("breakfast")
 
   useEffect(() => {
-    const days = listSavedDays()
-    setSavedDays(days)
+    const fetchDays = async () => {
+      const days = await listSavedDaysApi()
+      setSavedDays(days)
+    }
+    fetchDays()
 
     const loadData = async (day: string) => {
       // Use helper to apply state safely
@@ -235,18 +236,16 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
         }
       }
 
-      // 1. Try local first for fast feedback
-      const local = loadDayMenu(day)
-      applyMenuState(local)
-
-      // 2. Fetch from Firestore for cloud source of truth
+      // Fetch from API for cloud source of truth
       try {
         const cloud = await loadDayMenuFromFirestore(day)
         if (cloud) {
           applyMenuState(cloud)
+        } else {
+          applyMenuState(null)
         }
       } catch (err) {
-        console.error("Error loading daily menu from firestore:", err)
+        console.error("Error loading daily menu from server:", err)
       }
     }
 
@@ -405,20 +404,17 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
       tithi: fullTithi,
     }
 
-    // 1. Save locally first
-    saveDayMenu(day, menuState)
-    setSavedDays((prev) => (prev.includes(day) ? prev : [day, ...prev]))
-    setEditingDay(day)
-    setSaveNotice("સેવ સફળ!")
-
-    // 2. Sync to Firestore
+    // 1. Sync to API
     setIsSyncing(true)
     try {
       await saveDayMenuToFirestore(day, menuState)
-      setSaveNotice("ક્લાઉડ સિંક સફળ! ✅")
+      setSaveNotice("સેવ સફળ! ✅")
+      // Update saved days list locally
+      setSavedDays((prev) => (prev.includes(day) ? prev : [day, ...prev]))
+      setEditingDay(day)
     } catch (err: any) {
-      console.error("Firestore sync failed:", err)
-      setSaveNotice(`લોકલ સેવ OK (⚠️ ક્લાઉડ નિષ્ફળ)`)
+      console.error("Server sync failed:", err)
+      setSaveNotice(`⚠️ સેવ કરવામાં નિષ્ફળ`)
     } finally {
       setIsSyncing(false)
       if (saveNoticeTimerRef.current) clearTimeout(saveNoticeTimerRef.current)
@@ -692,8 +688,8 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
                       <div className={`relative overflow-x-auto rounded-xl border border-border bg-background/20 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500 ${isBlue ? 'ring-1 ring-blue-100/50' : ''}`}>
                         {title && (
                           <div className={`${headerBg} px-5 py-3 border-b ${borderColor}`}>
-                            <h4 className={`text-lg font-bold ${textColor} flex items-center gap-2.5`}>
-                              <span className={`w-2 h-2 rounded-full ${dotColor} shadow-sm`} />
+                            <h4 className={`text-xl font-bold ${textColor} flex items-center gap-2.5`}>
+                              <span className={`w-2.5 h-2.5 rounded-full ${dotColor} shadow-sm`} />
                               {title}
                             </h4>
                           </div>
@@ -716,7 +712,7 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
                                     <Input
                                       value={it.label || `${MEAL_TITLES[mealType]} - ${idx + 1}`}
                                       onChange={(e) => updateItem(mealType, it.id, { label: e.target.value })}
-                                      className={`h-auto border-none bg-transparent p-0 px-2 text-[10px] font-bold ${isBlue ? 'text-blue-600/70' : 'text-primary/70'} shadow-none focus-visible:ring-0`}
+                                      className={`h-auto border-none bg-transparent p-0 px-2 text-base font-bold ${isBlue ? 'text-blue-600/70' : 'text-primary/70'} shadow-none focus-visible:ring-0`}
                                     />
                                     <RecipeSuggestionInput
                                       value={it.name}
@@ -758,7 +754,7 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
                                   </div>
                                 </td>
                                 <td className="p-2 align-top border-r border-border/40">
-                                  <div className="flex items-center gap-0 w-fit mx-auto bg-background rounded-xl border border-border shadow-sm group focus-within:ring-1 focus-within:ring-primary/30 h-10 overflow-hidden">
+                                  <div className="flex items-center gap-0 w-fit mx-auto bg-background rounded-lg border border-border shadow-sm group focus-within:ring-1 focus-within:ring-primary/30 h-9 overflow-hidden">
                                     <Input
                                       type="number"
                                       value={it.adjustment ?? ""}
@@ -766,34 +762,34 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
                                         const val = e.target.value;
                                         updateItem(mealType, it.id, { adjustment: val });
                                       }}
-                                      className="w-14 h-full border-none text-center font-bold text-lg p-0 focus-visible:ring-0 shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                      className="w-10 h-full border-none text-center font-bold text-sm p-0 focus-visible:ring-0 shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                     />
                                     <div className="flex flex-col border-l border-border h-full">
                                       <button
                                         type="button"
-                                        className="flex-1 px-2 hover:bg-muted flex items-center justify-center border-b border-border/50 text-muted-foreground hover:text-foreground transition-all active:bg-muted/80"
+                                        className="flex-1 px-1.5 hover:bg-muted flex items-center justify-center border-b border-border/50 text-muted-foreground hover:text-foreground transition-all active:bg-muted/80"
                                         onClick={() => {
                                           const current = parseInt(it.adjustment || "0", 10) || 0
                                           updateItem(mealType, it.id, { adjustment: String(current + 1) })
                                         }}
                                       >
-                                        <ChevronUp className="h-3.5 w-3.5" />
+                                        <ChevronUp className="h-3 w-3" />
                                       </button>
                                       <button
                                         type="button"
-                                        className="flex-1 px-2 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-all active:bg-muted/80"
+                                        className="flex-1 px-1.5 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-all active:bg-muted/80"
                                         onClick={() => {
                                           const current = parseInt(it.adjustment || "0", 10) || 0
                                           updateItem(mealType, it.id, { adjustment: String(current - 1) })
                                         }}
                                       >
-                                        <ChevronDown className="h-3.5 w-3.5" />
+                                        <ChevronDown className="h-3 w-3" />
                                       </button>
                                     </div>
                                     <select
                                       value={it.adjustmentUnit || ""}
                                       onChange={(e) => updateItem(mealType, it.id, { adjustmentUnit: e.target.value })}
-                                      className="h-full border-l border-border bg-background px-2 text-[10px] font-bold focus:ring-0 focus:outline-none hover:bg-muted/30 transition-colors w-[65px] appearance-none text-center outline-none"
+                                      className="h-full border-l border-border bg-background px-1 text-[9px] font-bold focus:ring-0 focus:outline-none hover:bg-muted/30 transition-colors w-[52px] appearance-none text-center outline-none"
                                     >
                                       <option value="">-</option>
                                       {["કુંડી", "ડોલ", "ટબ", "કેરેટ", "કેન", "બોક્સ"].map((u) => (
