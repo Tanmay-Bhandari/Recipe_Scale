@@ -13,9 +13,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing filename or contentType' }, { status: 400 })
     }
 
-    const fb = initFirebaseAdmin()
-    if (!fb?.storage) {
-      return NextResponse.json({ error: 'Firebase Storage not initialized' }, { status: 500 })
+    const { admin: fb, error } = initFirebaseAdmin()
+    if (error || !fb || !fb.storage) {
+      return NextResponse.json({ 
+        error: 'Firebase Configuration Error', 
+        details: error || 'Firebase Storage not initialized',
+        help: 'Please add FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY to Vercel Environment Variables.'
+      }, { status: 500 })
     }
 
     const bucket = fb.storage().bucket()

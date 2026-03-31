@@ -121,7 +121,10 @@ export function initFirebaseAdmin() {
 }
 
 export function getFirebaseAdmin() {
-  if (!admin.apps || !admin.apps.length) initFirebaseAdmin()
+  if (!admin.apps || !admin.apps.length) {
+    const { error } = initFirebaseAdmin()
+    if (error) console.error("getFirebaseAdmin failed to init:", error)
+  }
   return admin
 }
 
