@@ -959,9 +959,18 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
             <Button type="button" variant="outline" onClick={() => setEditingDay("")}>
               Cancel
             </Button>
-            <Button type="button" onClick={saveDay} className="gap-2">
-              <CalendarDays className="h-4 w-4" />
-              સેવ કરો
+            <Button 
+              type="button" 
+              onClick={saveDay} 
+              className="gap-2" 
+              disabled={isSyncing}
+            >
+              {isSyncing ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
+              ) : (
+                <CalendarDays className="h-4 w-4" />
+              )}
+              {isSyncing ? "સેવ થઈ રહ્યું છે..." : "સેવ કરો"}
             </Button>
           </div>
         </div>

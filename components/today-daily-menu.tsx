@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, Fragment } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, Fragment } from "react"
 import { CalendarDays, ChevronDown, ChevronUp, Utensils, Info, CloudOff, Package } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -29,6 +29,9 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
   const [isOffline, setIsOffline] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingSaveRef = useRef<{ dayKey: string; menu: DailyMenuState } | null>(null)
 
   const mealOrder: MealType[] = useMemo(() => ["breakfast", "lunch", "dinner"], [])
   const [selectedMeal, setSelectedMeal] = useState<MealType>(mealOrder[0])
@@ -60,33 +63,49 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
     }
   }
 
+  // Debounced save — waits 600ms after last change before persisting to Firestore
+  const scheduleSave = useCallback((targetDayKey: string, updatedMenu: DailyMenuState) => {
+    pendingSaveRef.current = { dayKey: targetDayKey, menu: updatedMenu }
+    setSaveStatus('saving')
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(async () => {
+      const snapshot = pendingSaveRef.current
+      if (!snapshot) return
+      try {
+        await saveDayMenuToFirestore(snapshot.dayKey, snapshot.menu)
+        setSaveStatus('saved')
+        // Auto-clear "saved" message after 3s
+        setTimeout(() => setSaveStatus('idle'), 3000)
+      } catch (err) {
+        console.error("Debounced save failed:", err)
+        setSaveStatus('error')
+      }
+    }, 600)
+  }, [])
+
   async function updateItemField(mealType: MealType, itemId: string, fieldUpdates: Partial<DailyMenuItem>) {
     if (!menu) return
 
-    const updatedMenu = { ...menu }
-    const meal = updatedMenu.meals[mealType]
-    const itemIdx = meal.items.findIndex(i => i.id === itemId)
-
-    if (itemIdx !== -1) {
-      const items = [...meal.items]
-      items[itemIdx] = { ...items[itemIdx], ...fieldUpdates }
-      updatedMenu.meals[mealType].items = items
-      setMenu({ ...updatedMenu })
-
-      try {
-        await saveDayMenuToFirestore(dayKey, updatedMenu)
-      } catch (err) {
-        console.error("Failed to sync item update:", err)
-      }
+    const updatedMenu = {
+      ...menu,
+      meals: {
+        ...menu.meals,
+        [mealType]: {
+          ...menu.meals[mealType],
+          items: menu.meals[mealType].items.map(i =>
+            i.id === itemId ? { ...i, ...fieldUpdates } : i
+          ),
+        },
+      },
     }
+    setMenu(updatedMenu)
+    scheduleSave(dayKey, updatedMenu)
   }
 
-  async function updateMetricField(mealType: MealType, field: keyof DailyMenuMeal, newValue: string) {
+  function updateMetricField(mealType: MealType, field: keyof DailyMenuMeal, newValue: string) {
     if (!menu) return
 
-    const updatedMenu = { ...menu }
-    const meal = updatedMenu.meals[mealType]
-
+    const meal = { ...menu.meals[mealType] }
     const numValue = parseInt(newValue, 10) || 0
     if (field !== 'items' && field !== 'categories') {
       (meal as any)[field] = numValue
@@ -104,17 +123,17 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
       meal.totalOverride = vip + staff + guest + aaj + chhat + yuvati
     }
 
-    setMenu({ ...updatedMenu })
-
-    try {
-      await saveDayMenuToFirestore(dayKey, updatedMenu)
-    } catch (err) {
-      console.error("Failed to sync metric update:", err)
-    }
+    const updatedMenu = { ...menu, meals: { ...menu.meals, [mealType]: meal } }
+    setMenu(updatedMenu)
+    scheduleSave(dayKey, updatedMenu)
   }
 
   useEffect(() => {
     refresh(dayKey)
+    // Clear any pending saves when day changes
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    }
   }, [dayKey])
 
   const handleDownloadPDF = async () => {
@@ -460,6 +479,23 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
                 </div>
                 {isLoading && (
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                )}
+                {/* Debounced save status */}
+                {saveStatus === 'saving' && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                    <div className="h-2 w-2 animate-spin rounded-full border border-amber-500 border-t-transparent" />
+                    સેવ થઈ રહ્યું છે...
+                  </div>
+                )}
+                {saveStatus === 'saved' && (
+                  <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-50 border border-green-200 text-green-700 text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                    ✅ સેવ સફળ
+                  </div>
+                )}
+                {saveStatus === 'error' && (
+                  <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                    ⚠️ સેવ નિષ્ફળ
+                  </div>
                 )}
               </div>
 

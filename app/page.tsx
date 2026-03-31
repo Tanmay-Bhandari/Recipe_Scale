@@ -106,7 +106,7 @@ const SAMPLE_RECIPES: Recipe[] = [
 ]
 
 export default function Home() {
-  const [recipes, setRecipes] = useState<Recipe[]>(SAMPLE_RECIPES)
+  const [recipes, setRecipes] = useState<Recipe[]>([])
   const [showForm, setShowForm] = useState(false)
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null)
   const [focusedRecipeId, setFocusedRecipeId] = useState<string | null>(null)
@@ -308,6 +308,10 @@ export default function Home() {
             return
           }
           setActiveTab(tab)
+          // Always reload recipes fresh from Firestore when switching to recipes tab
+          if (tab === "recipes") {
+            void loadRecipes()
+          }
         }}
         isAdmin={isAdmin}
         session={session}
