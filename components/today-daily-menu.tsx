@@ -546,9 +546,17 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
         <section className="rounded-xl border border-destructive/20 bg-destructive/5 p-6 text-center animate-in fade-in duration-500">
           <Info className="h-10 w-10 text-destructive/40 mx-auto mb-3" />
           <h4 className="text-lg font-bold text-destructive mb-1">કનેક્શન નિષ્ફળ</h4>
-          <p className="text-sm text-destructive/80 max-w-sm mx-auto font-medium">
+          <p className="text-sm text-destructive/80 max-w-sm mx-auto font-medium whitespace-pre-wrap mb-4">
             ડેટાબેઝ સાથે કનેક્ટ થવામાં સમસ્યા આવી રહી છે. (Error: {errorMsg})
           </p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="font-bold border-destructive/30 text-destructive hover:bg-destructive/10"
+            onClick={() => refresh(dayKey)}
+          >
+            ફરી પ્રયત્ન કરો (Retry)
+          </Button>
         </section>
       ) : !menu ? (
         <section className="rounded-xl border border-border bg-card p-12 text-center animate-in fade-in duration-500">

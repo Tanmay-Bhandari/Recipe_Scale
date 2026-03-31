@@ -17,30 +17,37 @@ export function initFirebaseAdmin() {
       // Vercel UI sometimes adds extra quotes or escapes newlines differently.
       let privateKey = pk.trim()
       
-      // Remove wrapping double or single quotes if present
+      // Remove wrapping double or single quotes if present (Vercel UI sometimes adds these)
       if ((privateKey.startsWith('"') && privateKey.endsWith('"')) || 
           (privateKey.startsWith("'") && privateKey.endsWith("'"))) {
         privateKey = privateKey.substring(1, privateKey.length - 1)
       }
       
-      // Replace literal \n string with actual newline characters
-      // We do this twice in case of double-escaping (\\n -> \n -> newline)
-      privateKey = privateKey.replace(/\\n/g, '\n').replace(/\\n/g, '\n')
+      // Replace literal \n string (escaped) with actual newline characters
+      // We do this globally to catch all occurrences. 
+      // Vercel environment variables often escape newlines when pasted manually.
+      privateKey = privateKey.replace(/\\n/g, '\n')
       
       // Ensure the key has the correct headers/footers if missing
       if (!privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+        console.log('initFirebaseAdmin: Adding missing headers to private key')
         privateKey = `-----BEGIN PRIVATE KEY-----\n${privateKey}\n-----END PRIVATE KEY-----`
       }
 
-      admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId: pi,
-          clientEmail: ce,
-          privateKey: privateKey,
-        }),
-      })
-      console.log('initFirebaseAdmin: initialized using separated FIREBASE_* env fields')
-      return { admin, error: null }
+      try {
+        admin.initializeApp({
+          credential: admin.credential.cert({
+            projectId: pi,
+            clientEmail: ce,
+            privateKey: privateKey,
+          }),
+        })
+        console.log('initFirebaseAdmin: Successfully initialized using separated FIREBASE_* env fields')
+        return { admin, error: null }
+      } catch (initErr: any) {
+        console.error('initFirebaseAdmin: Initialization failed with env vars', initErr.message)
+        throw initErr // Catch block below will handle this
+      }
     }
 
     // Case 2: Local development using service-account.json

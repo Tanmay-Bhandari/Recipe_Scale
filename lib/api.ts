@@ -12,7 +12,11 @@ export function apiUrl(path: string) {
 
 async function handleRes(res: Response) {
   const json = await res.json().catch(() => null)
-  if (!res.ok) throw new Error(json?.error || json?.message || res.statusText)
+  if (!res.ok) {
+    const errorMsg = json?.error || json?.details || json?.message || res.statusText
+    console.error(`API Error [${res.status}]:`, errorMsg)
+    throw new Error(errorMsg)
+  }
   return json
 }
 

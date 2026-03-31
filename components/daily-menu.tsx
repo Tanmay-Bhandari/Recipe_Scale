@@ -1,7 +1,7 @@
 "use client"
 
-import { CalendarDays, Trash2, Plus, ChevronUp, ChevronDown } from "lucide-react"
-import { useEffect, useMemo, useRef, useState, type DragEvent } from "react"
+import { CalendarDays, Trash2, Plus, ChevronUp, ChevronDown, Info } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea"
@@ -226,66 +226,70 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
 
   const [selectedMeal, setSelectedMeal] = useState<MealType>("breakfast")
 
+  const loadData = useCallback(async (day: string) => {
+    // Use helper to apply state safely
+    const applyMenuState = (current: DailyMenuState | null) => {
+      if (current) {
+        const migratedMeals = { ...current.meals }
+        const migrateItems = (items: DailyMenuItem[]) =>
+          items.map(it => {
+            if (!it.label && it.name) {
+              return { ...it, label: it.name, name: "" }
+            }
+            return it
+          })
+
+        migratedMeals.lunch = { ...migratedMeals.lunch, items: migrateItems(migratedMeals.lunch.items) }
+        migratedMeals.dinner = { ...migratedMeals.dinner, items: migrateItems(migratedMeals.dinner.items) }
+
+        setMeals(migratedMeals)
+        setDayOfWeek(current.dayOfWeek ?? "")
+        setTithiMonth(current.tithiMonth ?? "")
+        setTithiPhase(current.tithiPhase ?? "")
+        setTithiDay(current.tithiDay ?? "")
+        setEditingDay(day)
+      } else {
+        setMeals({
+          breakfast: { vip: 0, staff: 0, guest: 0, ajeevan: 0, chhatralaya: 0, yuvati: 0, totalOverride: 0, items: BREAKFAST_DEFAULT_ITEMS.map((name) => namedItem(name)) },
+          lunch: { vip: 0, staff: 0, guest: 0, ajeevan: 0, chhatralaya: 0, yuvati: 0, totalOverride: 0, items: LUNCH_DEFAULT_ITEMS.map((name) => namedItem(name)) },
+          dinner: { vip: 0, staff: 0, guest: 0, ajeevan: 0, chhatralaya: 0, yuvati: 0, totalOverride: 0, items: DINNER_DEFAULT_ITEMS.map((name) => namedItem(name)) },
+        })
+        setDayOfWeek("")
+        setTithiMonth("")
+        setTithiPhase("")
+        setTithiDay("")
+        setEditingDay(day)
+      }
+    }
+
+    // Fetch from API for cloud source of truth
+    setErrorMsg(null)
+    try {
+      const cloud = await loadDayMenuFromFirestore(day)
+      if (cloud) {
+        applyMenuState(cloud)
+      } else {
+        applyMenuState(null)
+      }
+    } catch (err: any) {
+      console.error("Error loading daily menu from server:", err)
+      setErrorMsg(err.message || "Cloud sync error")
+    }
+  }, [BREAKFAST_DEFAULT_ITEMS, LUNCH_DEFAULT_ITEMS, DINNER_DEFAULT_ITEMS])
+
   useEffect(() => {
     const fetchDays = async () => {
-      const days = await listSavedDaysApi()
-      setSavedDays(days)
+      try {
+        const days = await listSavedDaysApi()
+        setSavedDays(days)
+      } catch (err) {
+        console.error("Failed to load saved days list", err)
+      }
     }
     fetchDays()
 
-    const loadData = async (day: string) => {
-      // Use helper to apply state safely
-      const applyMenuState = (current: DailyMenuState | null) => {
-        if (current) {
-          const migratedMeals = { ...current.meals }
-          const migrateItems = (items: DailyMenuItem[]) =>
-            items.map(it => {
-              if (!it.label && it.name) {
-                return { ...it, label: it.name, name: "" }
-              }
-              return it
-            })
-
-          migratedMeals.lunch = { ...migratedMeals.lunch, items: migrateItems(migratedMeals.lunch.items) }
-          migratedMeals.dinner = { ...migratedMeals.dinner, items: migrateItems(migratedMeals.dinner.items) }
-
-          setMeals(migratedMeals)
-          setDayOfWeek(current.dayOfWeek ?? "")
-          setTithiMonth(current.tithiMonth ?? "")
-          setTithiPhase(current.tithiPhase ?? "")
-          setTithiDay(current.tithiDay ?? "")
-          setEditingDay(day)
-        } else {
-          setMeals({
-            breakfast: { vip: 0, staff: 0, guest: 0, ajeevan: 0, chhatralaya: 0, yuvati: 0, totalOverride: 0, items: BREAKFAST_DEFAULT_ITEMS.map((name) => namedItem(name)) },
-            lunch: { vip: 0, staff: 0, guest: 0, ajeevan: 0, chhatralaya: 0, yuvati: 0, totalOverride: 0, items: LUNCH_DEFAULT_ITEMS.map((name) => namedItem(name)) },
-            dinner: { vip: 0, staff: 0, guest: 0, ajeevan: 0, chhatralaya: 0, yuvati: 0, totalOverride: 0, items: DINNER_DEFAULT_ITEMS.map((name) => namedItem(name)) },
-          })
-          setDayOfWeek("")
-          setTithiMonth("")
-          setTithiPhase("")
-          setTithiDay("")
-          setEditingDay(day)
-        }
-      }
-
-      // Fetch from API for cloud source of truth
-      setErrorMsg(null)
-      try {
-        const cloud = await loadDayMenuFromFirestore(day)
-        if (cloud) {
-          applyMenuState(cloud)
-        } else {
-          applyMenuState(null)
-        }
-      } catch (err: any) {
-        console.error("Error loading daily menu from server:", err)
-        setErrorMsg(err.message || "Cloud sync error")
-      }
-    }
-
     void loadData(selectedDay)
-  }, [selectedDay])
+  }, [selectedDay, loadData])
 
   // Auto-calculate Day of Week when date changes
   useEffect(() => {
@@ -636,6 +640,26 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
           </div>
         </div>
       </section>
+      
+      {errorMsg && (
+        <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 text-center animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center justify-center gap-2 text-destructive mb-1">
+            <Info className="h-5 w-5" />
+            <h4 className="font-bold">ડેટા લોડ કરવામાં ભૂલ</h4>
+          </div>
+          <p className="text-sm text-destructive/80 font-medium whitespace-pre-wrap">
+            {errorMsg}
+          </p>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="mt-2 h-8 text-xs font-bold hover:bg-destructive/10 text-destructive"
+            onClick={() => void loadData(selectedDay)}
+          >
+            ફરી પ્રયત્ન કરો
+          </Button>
+        </div>
+      )}
 
       {/* Meals: tabs + single-meal editor */}
       <section className="space-y-4">

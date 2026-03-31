@@ -50,12 +50,15 @@ export function getTodayKey(): string {
 export async function listSavedDaysApi(): Promise<string[]> {
   try {
     const res = await fetch(apiUrl('/api/daily-menus'))
-    if (!res.ok) return []
+    if (!res.ok) {
+      const data = await res.json().catch(() => null)
+      throw new Error(data?.error || data?.details || "Failed to list available dates")
+    }
     const dates = await res.json()
     return Array.isArray(dates) ? dates : []
-  } catch (err) {
-    console.error("Failed to load saved days from API", err)
-    return []
+  } catch (err: any) {
+    console.error("Failed to load saved days from API:", err)
+    throw err
   }
 }
 
@@ -82,7 +85,10 @@ export async function loadDayMenuFromFirestore(dayKey: string): Promise<DailyMen
   try {
     const res = await fetch(apiUrl(`/api/daily-menus/${dayKey}`))
     if (res.status === 404) return null
-    if (!res.ok) return null
+    if (!res.ok) {
+      const data = await res.json().catch(() => null)
+      throw new Error(data?.error || data?.details || `Failed to load menu for ${dayKey}`)
+    }
     
     const data = await res.json() as DailyMenuState
     
@@ -129,6 +135,6 @@ export async function loadDayMenuFromFirestore(dayKey: string): Promise<DailyMen
     return data
   } catch (error: any) {
     console.error("Error loading via API:", error)
-    return null
+    throw error
   }
 }
