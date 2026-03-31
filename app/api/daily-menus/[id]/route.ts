@@ -5,9 +5,9 @@ import applyCorsHeaders from '@/lib/cors'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(req: NextRequest) {
+export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
   try {
-    const id = req.nextUrl.pathname.split('/').pop() || ''
+    const { id } = await props.params
     const { admin: fb, error } = initFirebaseAdmin()
     if (error || !fb) {
       return NextResponse.json({ 
@@ -32,9 +32,9 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function PUT(req: NextRequest) {
+export async function PUT(req: NextRequest, props: { params: Promise<{ id: string }> }) {
   try {
-    const id = req.nextUrl.pathname.split('/').pop() || ''
+    const { id } = await props.params
     const data = await req.json()
     const { admin: fb, error } = initFirebaseAdmin()
     if (error || !fb) {
