@@ -9,7 +9,6 @@ import { Header } from "@/components/header"
 import { RecipeForm } from "@/components/recipe-form"
 import { RecipeCard } from "@/components/recipe-card"
 import api from "@/lib/api"
-import { deleteRecipeClient } from "@/lib/firebaseClient"
 import { useToast } from "@/hooks/use-toast"
 import { EmptyRecipes } from "@/components/empty-recipes"
 import { FoodPacketCalculator } from "@/components/food-packet-calculator"
@@ -131,13 +130,8 @@ export default function Home() {
   useEffect(() => {
     // Load state from localStorage on mount (prevents hydration mismatch)
     if (typeof window !== "undefined") {
-      try {
-        const rawRecipes = localStorage.getItem("recipes")
-        if (rawRecipes) {
-          const parsed = JSON.parse(rawRecipes)
-          if (Array.isArray(parsed) && parsed.length > 0) setRecipes(parsed)
-        }
-      } catch (e) { }
+      // We no longer read from localStorage to ensure "direct load" from Firestore
+
 
       // Priority: 1. URL Query Param (?tab=recipes), 2. LocalStorage
       const params = new URLSearchParams(window.location.search)
@@ -172,28 +166,15 @@ export default function Home() {
   }, [isLoaded, isAdmin, activeTab])
 
   const loadRecipes = useCallback(async () => {
-    let localFound = false
-    try {
-      if (typeof window !== "undefined") {
-        const raw = localStorage.getItem("recipes")
-        if (raw) {
-          const parsed = JSON.parse(raw)
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setRecipes(parsed)
-            localFound = true
-          }
-        }
-      }
-    } catch (e) { }
-
-    const loadingToast = localFound ? null : toast({ title: "Loading recipes", description: "Contacting backend..." })
+    const loadingToast = toast({ title: "Loading recipes", description: "Contacting cloud database..." })
 
     try {
       const data = await api.listRecipes()
       if (!data) {
-        if (loadingToast) loadingToast.update({ id: loadingToast.id, title: "No recipes", description: "No recipes returned from backend", open: true })
+        if (loadingToast) loadingToast.update({ id: loadingToast.id, title: "No recipes", description: "No recipes found in cloud", open: true })
         return
       }
+      
       const dedupeById = (items: Recipe[]) => {
         const map = new Map<string, Recipe>()
         for (const it of items) {
@@ -212,13 +193,12 @@ export default function Home() {
 
       if (newRecipes.length > 0) {
         setRecipes(newRecipes)
-        if (typeof window !== "undefined") localStorage.setItem("recipes", JSON.stringify(newRecipes))
       }
 
-      if (loadingToast) loadingToast.update({ id: loadingToast.id, title: "Loaded", description: "Recipes loaded from backend", open: true })
+      if (loadingToast) loadingToast.update({ id: loadingToast.id, title: "Loaded", description: "All recipes loaded from Firestore", open: true })
     } catch (err: any) {
-      console.warn("Silent sync failed, using local data:", err?.message || String(err))
-      if (loadingToast) loadingToast.update({ id: loadingToast.id, title: "Offline Mode", description: "Using locally saved recipes", open: true })
+      console.error("Cloud fetch failed:", err?.message || String(err))
+      if (loadingToast) loadingToast.update({ id: loadingToast.id, title: "Connection Error", description: `Could not load from Firestore: ${err?.message}`, open: true })
     }
   }, [toast])
 
@@ -266,24 +246,18 @@ export default function Home() {
       try {
         let deleted = false
         try {
-          await deleteRecipeClient(id)
+          await api.deleteRecipe(id)
           deleted = true
-        } catch (clientErr) {
-          console.warn("Client deletion failed, falling back to API:", clientErr)
-          try {
-            await api.deleteRecipe(id)
+        } catch (apiErr: any) {
+          // Treat "Not found" as success (already deleted or sample item)
+          const msg = apiErr?.message || String(apiErr)
+          if (msg.toLowerCase().includes('not found')) {
             deleted = true
-          } catch (apiErr) {
-            // Treat "Not found" as success (already deleted or sample item)
-            const msg = (apiErr && (apiErr as any).message) || String(apiErr)
-            if (msg.toLowerCase().includes('not found')) {
-              deleted = true
-            } else if (msg.toLowerCase().includes('device id mismatch')) {
-              throw new Error('Delete blocked: this recipe belongs to a different browser (device id mismatch).')
-            } else {
-              console.error("API deletion failed:", apiErr)
-              throw apiErr
-            }
+          } else if (msg.toLowerCase().includes('device id mismatch')) {
+            throw new Error('Delete blocked: this recipe belongs to a different browser (device id mismatch).')
+          } else {
+            console.error("API deletion failed:", apiErr)
+            throw apiErr
           }
         }
 

@@ -41,12 +41,7 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
   }, [recipes])
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("recipes")
-        if (raw) setRecipes(JSON.parse(raw))
-      } catch (e) {}
-    }
+    // We no longer read recipes from localStorage to ensure direct cloud loading
   }, [])
 
   const [name, setName] = useState(editingRecipe?.name ?? "")
@@ -111,23 +106,7 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
         console.warn('Failed to fetch ingredient names from API', e)
       }
 
-      // If backend returned nothing, fallback to localStorage (client-side)
-      if (names.size === 0) {
-        try {
-          const recipesRaw = localStorage.getItem('recipes')
-          if (recipesRaw) {
-            const recipes = JSON.parse(recipesRaw)
-            for (const recipe of recipes) {
-              for (const ing of recipe.ingredients || []) {
-                if (ing && ing.name && typeof ing.name === 'string') names.add(ing.name)
-              }
-            }
-          }
-        } catch (e) {
-          console.warn('Failed to parse local recipes', e)
-        }
-      }
-
+      // We no longer fallback to localStorage to ensure "direct load" from cloud
       const arr = Array.from(names).sort()
       setPreviousIngredientNames(arr)
       return arr.length
@@ -302,25 +281,8 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
 
         t.update({ id: t.id, title: 'સેવ સફળ!', description: 'રેસીપી સફળતાપૂર્વક પૂર્વક સેવ કરી છે', open: true })
       } catch (err: any) {
-        console.warn('Save failed, falling back to localStorage:', err?.message || String(err))
-        // Fallback: save locally so the UI still updates when backend is unavailable
-        try {
-          const raw = localStorage.getItem('recipes')
-          const arr = raw ? JSON.parse(raw) : []
-          const existingIndex = arr.findIndex((r: any) => r.id === recipe.id)
-          const toSave: any = { ...recipe, image: imageUrl, imagePath }
-          if (existingIndex !== -1) {
-            arr[existingIndex] = toSave
-          } else {
-            arr.unshift(toSave)
-          }
-          localStorage.setItem('recipes', JSON.stringify(arr))
-          onAdd(toSave)
-          window.dispatchEvent(new Event('recipesSaved'))
-          t.update({ id: t.id, title: 'લોકલી સેવ સફળ!', description: 'બેકએન્ડ ઉપલબ્ધ નથી — બ્રાઉઝર સ્ટોરેજમાં સેવ કર્યું છે', open: true })
-        } catch (e) {
-          t.update({ id: t.id, title: 'ભૂલ', description: err?.message || 'રેસીપી સેવ કરવામાં નિષ્ફળ', open: true })
-        }
+        console.error('Save failed:', err?.message || String(err))
+        t.update({ id: t.id, title: 'ભૂલ', description: err?.message || 'રેસીપી સેવ કરવામાં નિષ્ફળ. કૃપા કરીને ઇન્ટરનેટ કનેક્શન તપાસો.', open: true })
       } finally {
         setIsSaving(false)
       }

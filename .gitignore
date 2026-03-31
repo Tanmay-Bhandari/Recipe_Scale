@@ -31,6 +31,6 @@ node_modules/
 .next/
 .env*.local
 .DS_Store
-# service-account.json (Unignored for Vercel deployment)
-# service-account.json
+# service-account.json (Ignored for security)
+service-account.json
 .vercel
