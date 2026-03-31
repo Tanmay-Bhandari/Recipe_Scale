@@ -87,6 +87,7 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
   const [tithiDay, setTithiDay] = useState("")
   const [saveNotice, setSaveNotice] = useState<string>("")
   const [isSyncing, setIsSyncing] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const saveNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const emptyItem = (label?: string): DailyMenuItem => ({
@@ -269,6 +270,7 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
       }
 
       // Fetch from API for cloud source of truth
+      setErrorMsg(null)
       try {
         const cloud = await loadDayMenuFromFirestore(day)
         if (cloud) {
@@ -276,8 +278,9 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
         } else {
           applyMenuState(null)
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error loading daily menu from server:", err)
+        setErrorMsg(err.message || "Cloud sync error")
       }
     }
 
@@ -358,13 +361,13 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
 
       // ONLY calculate totalOverride automatically if we are NOT manually setting it
       if (field !== 'totalOverride') {
-        const vip = nextMeal.vip || 0
-        const staff = nextMeal.staff || 0
-        const guest = nextMeal.guest || 0
-        const ajeevan = nextMeal.ajeevan || 0
-        const chhatralaya = nextMeal.chhatralaya || 0
-        const yuvati = nextMeal.yuvati || 0
-        nextMeal.totalOverride = vip + staff + guest + ajeevan + chhatralaya + yuvati
+        const vip = Number(nextMeal.vip) || 0
+        const staff = Number(nextMeal.staff) || 0
+        const guest = Number(nextMeal.guest) || 0
+        const aaj = Number(nextMeal.ajeevan) || 0
+        const chhat = Number(nextMeal.chhatralaya) || 0
+        const yuvati = Number(nextMeal.yuvati) || 0
+        nextMeal.totalOverride = vip + staff + guest + aaj + chhat + yuvati
       }
 
       return {

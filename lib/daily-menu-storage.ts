@@ -84,7 +84,49 @@ export async function loadDayMenuFromFirestore(dayKey: string): Promise<DailyMen
     if (res.status === 404) return null
     if (!res.ok) return null
     
-    return await res.json() as DailyMenuState
+    const data = await res.json() as DailyMenuState
+    
+    // DATA MIGRATION: Map old fields (calories, categories, maximum) to new fields (vip, staff, guest)
+    if (data && data.meals) {
+      (Object.keys(data.meals) as MealType[]).forEach(mt => {
+        const meal = data.meals[mt]
+        if (!meal) return
+        
+        // Ensure all numeric fields are actually parsed as numbers
+        const toNum = (val: any) => {
+          if (typeof val === 'number') return val
+          if (typeof val === 'string') return parseInt(val, 10) || 0
+          return 0
+        }
+
+        // Map old calories -> vip
+        if (meal.vip === undefined && (meal as any).calories !== undefined) {
+          meal.vip = toNum((meal as any).calories)
+        }
+        // Map old categories -> staff (if numeric)
+        if (meal.staff === undefined && (meal as any).categories !== undefined) {
+          const cat = (meal as any).categories
+          if (!isNaN(parseInt(cat, 10))) {
+            meal.staff = toNum(cat)
+          }
+        }
+        // Map old maximum -> guest
+        if (meal.guest === undefined && (meal as any).maximum !== undefined) {
+          meal.guest = toNum((meal as any).maximum)
+        }
+
+        // Normalize all metrics to number (or 0)
+        meal.ajeevan = toNum(meal.ajeevan)
+        meal.chhatralaya = toNum(meal.chhatralaya)
+        meal.yuvati = toNum(meal.yuvati)
+        meal.vip = toNum(meal.vip)
+        meal.staff = toNum(meal.staff)
+        meal.guest = toNum(meal.guest)
+        meal.totalOverride = toNum(meal.totalOverride)
+      })
+    }
+
+    return data
   } catch (error: any) {
     console.error("Error loading via API:", error)
     return null

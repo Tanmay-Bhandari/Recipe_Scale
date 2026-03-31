@@ -33,12 +33,34 @@ function loadFromEnvOrFile() {
     return null
   }
 
-  if (process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PROJECT_ID) {
-    return {
-      private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-      client_email: process.env.FIREBASE_CLIENT_EMAIL,
-      project_id: process.env.FIREBASE_PROJECT_ID,
+  const pk = process.env.FIREBASE_PRIVATE_KEY
+  const ce = process.env.FIREBASE_CLIENT_EMAIL
+  const pi = process.env.FIREBASE_PROJECT_ID
+
+  if (pk && ce && pi) {
+    // Clean the private key: remove wrapping quotes and handle \n
+    let privateKey = pk.trim()
+    if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+      privateKey = privateKey.substring(1, privateKey.length - 1)
     }
+    privateKey = privateKey.replace(/\\n/g, '\n')
+
+    return {
+      private_key: privateKey,
+      client_email: ce,
+      project_id: pi,
+    }
+  }
+
+  // Debug logging for Vercel
+  if (process.env.VERCEL) {
+    console.warn('initFirebaseAdmin: Missing required environment variables:', {
+      has_pk: !!pk,
+      has_ce: !!ce,
+      has_pi: !!pi,
+      has_credentials_json: !!process.env.FIREBASE_ADMIN_CREDENTIALS,
+      has_adc: !!process.env.GOOGLE_APPLICATION_CREDENTIALS
+    })
   }
 
   return null

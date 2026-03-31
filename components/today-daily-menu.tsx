@@ -27,28 +27,31 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({})
   const [isLoading, setIsLoading] = useState(false)
   const [isOffline, setIsOffline] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+
+  const mealOrder: MealType[] = useMemo(() => ["breakfast", "lunch", "dinner"], [])
+  const [selectedMeal, setSelectedMeal] = useState<MealType>(mealOrder[0])
 
   const toggleItem = (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
     setExpandedItems(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
-  async function refresh(targetDay: string) {
+  const refresh = async (targetDay: string) => {
     setIsLoading(true)
+    setErrorMsg(null)
     setIsOffline(false)
     try {
-      console.log(`Checking API for: ${targetDay}`)
-      const cloud = await loadDayMenuFromFirestore(targetDay)
-
-      if (cloud) {
-        setMenu(cloud)
-        setIsOffline(false)
+      const data = await loadDayMenuFromFirestore(targetDay)
+      if (data) {
+        setMenu(data)
       } else {
         setMenu(null)
       }
     } catch (err: any) {
       console.error("Refresh failed:", err)
-      // Check if it's an offline error
+      setErrorMsg(err.message || "Cloud sync error")
       if (err.message?.includes('offline') || err.code === 'unavailable') {
         setIsOffline(true)
       }
@@ -60,7 +63,6 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
   async function updateItemField(mealType: MealType, itemId: string, fieldUpdates: Partial<DailyMenuItem>) {
     if (!menu) return
 
-    // Update local state for immediate feedback
     const updatedMenu = { ...menu }
     const meal = updatedMenu.meals[mealType]
     const itemIdx = meal.items.findIndex(i => i.id === itemId)
@@ -71,7 +73,6 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
       updatedMenu.meals[mealType].items = items
       setMenu({ ...updatedMenu })
 
-      // Save to Firestore
       try {
         await saveDayMenuToFirestore(dayKey, updatedMenu)
       } catch (err) {
@@ -83,11 +84,9 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
   async function updateMetricField(mealType: MealType, field: keyof DailyMenuMeal, newValue: string) {
     if (!menu) return
 
-    // Update local state for immediate feedback
     const updatedMenu = { ...menu }
     const meal = updatedMenu.meals[mealType]
 
-    // Update the specific field
     const numValue = parseInt(newValue, 10) || 0
     if (field !== 'items' && field !== 'categories') {
       (meal as any)[field] = numValue
@@ -95,20 +94,18 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
       meal[field] = newValue
     }
 
-    // ONLY calculate totalOverride automatically if we are NOT manually setting it
     if (field !== 'totalOverride') {
-      const vip = meal.vip || 0
-      const staff = meal.staff || 0
-      const guest = meal.guest || 0
-      const ajeevan = meal.ajeevan || 0
-      const chhatralaya = meal.chhatralaya || 0
-      const yuvati = meal.yuvati || 0
-      meal.totalOverride = vip + staff + guest + ajeevan + chhatralaya + yuvati
+      const vip = Number(meal.vip) || 0
+      const staff = Number(meal.staff) || 0
+      const guest = Number(meal.guest) || 0
+      const aaj = Number(meal.ajeevan) || 0
+      const chhat = Number(meal.chhatralaya) || 0
+      const yuvati = Number(meal.yuvati) || 0
+      meal.totalOverride = vip + staff + guest + aaj + chhat + yuvati
     }
 
     setMenu({ ...updatedMenu })
 
-    // Save to Firestore
     try {
       await saveDayMenuToFirestore(dayKey, updatedMenu)
     } catch (err) {
@@ -119,10 +116,6 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
   useEffect(() => {
     refresh(dayKey)
   }, [dayKey])
-
-  const mealOrder: MealType[] = useMemo(() => ["breakfast", "lunch", "dinner"], [])
-  const [selectedMeal, setSelectedMeal] = useState<MealType>(mealOrder[0])
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
 
   const handleDownloadPDF = async () => {
     if (!menu) return
@@ -513,16 +506,24 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
         </div>
       </section>
 
-      {!menu ? (
-        <section className="rounded-xl border border-border bg-card p-12 text-center">
+      {errorMsg ? (
+        <section className="rounded-xl border border-destructive/20 bg-destructive/5 p-6 text-center animate-in fade-in duration-500">
+          <Info className="h-10 w-10 text-destructive/40 mx-auto mb-3" />
+          <h4 className="text-lg font-bold text-destructive mb-1">કનેક્શન નિષ્ફળ</h4>
+          <p className="text-sm text-destructive/80 max-w-sm mx-auto font-medium">
+            ડેટાબેઝ સાથે કનેક્ટ થવામાં સમસ્યા આવી રહી છે. (Error: {errorMsg})
+          </p>
+        </section>
+      ) : !menu ? (
+        <section className="rounded-xl border border-border bg-card p-12 text-center animate-in fade-in duration-500">
           <Utensils className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
           <h4 className="text-xl font-bold text-foreground mb-1">ડેટા મળ્યો નથી</h4>
           <p className="text-sm text-muted-foreground max-w-xs mx-auto font-medium">
-            આ તારીખ માટે દૈનિક મેનુ હજી સેવ નથી થયું. પહેલા એડમિન મેનુમાં જઈ વસ્તું સેવ કરો.
+            આ તારીખ માટે દૈનિક મેનુ હજી સેવ નથી થયું. પહેલા એડમિન મેનુમાં જઈ વસ્તુ સેવ કરો.
           </p>
         </section>
       ) : (
-        <section className="space-y-6">
+        <section className="space-y-6 animate-in fade-in duration-500">
           <div className="flex gap-2 p-1.5 bg-muted/50 rounded-2xl w-full border border-border/50 shadow-inner">
             {mealOrder.map((mt) => (
               <button
@@ -545,7 +546,7 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
                 <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">આજીવન</p>
                 <Input
                   type="number"
-                  value={menu.meals[selectedMeal].ajeevan ?? ""}
+                  value={menu?.meals?.[selectedMeal]?.ajeevan ?? ""}
                   onChange={(e) => updateMetricField(selectedMeal, "ajeevan", e.target.value)}
                   className="h-12 bg-transparent text-center text-3xl font-black border-none shadow-none focus-visible:ring-0"
                 />
@@ -554,7 +555,7 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
                 <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">વી.આઇ.પી.</p>
                 <Input
                   type="number"
-                  value={menu.meals[selectedMeal].vip ?? ""}
+                  value={menu?.meals?.[selectedMeal]?.vip ?? ""}
                   onChange={(e) => updateMetricField(selectedMeal, "vip", e.target.value)}
                   className="h-12 bg-transparent text-center text-3xl font-black border-none shadow-none focus-visible:ring-0"
                 />
@@ -563,7 +564,7 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
                 <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">છાત્રાલય</p>
                 <Input
                   type="number"
-                  value={menu.meals[selectedMeal].chhatralaya ?? ""}
+                  value={menu?.meals?.[selectedMeal]?.chhatralaya ?? ""}
                   onChange={(e) => updateMetricField(selectedMeal, "chhatralaya", e.target.value)}
                   className="h-12 bg-transparent text-center text-3xl font-black border-none shadow-none focus-visible:ring-0"
                 />
@@ -572,7 +573,7 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
                 <p className="text-sm font-black uppercase tracking-widest text-primary mb-3">કુલ</p>
                 <Input
                   type="number"
-                  value={menu.meals[selectedMeal].totalOverride ?? ""}
+                  value={menu?.meals?.[selectedMeal]?.totalOverride ?? ""}
                   onChange={(e) => updateMetricField(selectedMeal, "totalOverride", e.target.value)}
                   className="h-20 bg-transparent text-center text-6xl font-black text-primary border-none shadow-none focus-visible:ring-0"
                 />
@@ -582,7 +583,7 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
                 <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">સ્ટાફ</p>
                 <Input
                   type="number"
-                  value={menu.meals[selectedMeal].staff ?? ""}
+                  value={menu?.meals?.[selectedMeal]?.staff ?? ""}
                   onChange={(e) => updateMetricField(selectedMeal, "staff", e.target.value)}
                   className="h-12 bg-transparent text-center text-3xl font-black border-none shadow-none focus-visible:ring-0"
                 />
@@ -591,7 +592,7 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
                 <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">મહેમાન</p>
                 <Input
                   type="number"
-                  value={menu.meals[selectedMeal].guest ?? ""}
+                  value={menu?.meals?.[selectedMeal]?.guest ?? ""}
                   onChange={(e) => updateMetricField(selectedMeal, "guest", e.target.value)}
                   className="h-12 bg-transparent text-center text-3xl font-black border-none shadow-none focus-visible:ring-0"
                 />
@@ -600,7 +601,7 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
                 <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">યુવતી</p>
                 <Input
                   type="number"
-                  value={menu.meals[selectedMeal].yuvati ?? ""}
+                  value={menu?.meals?.[selectedMeal]?.yuvati ?? ""}
                   onChange={(e) => updateMetricField(selectedMeal, "yuvati", e.target.value)}
                   className="h-12 bg-transparent text-center text-3xl font-black border-none shadow-none focus-visible:ring-0"
                 />
@@ -610,7 +611,7 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
             <div className="p-6 md:p-8 bg-background/50">
               {(() => {
                 const meal = menu.meals[selectedMeal]
-                const items = meal.items
+                const items = meal?.items || []
                 const isMainMeal = (selectedMeal === "breakfast" || selectedMeal === "lunch" || selectedMeal === "dinner")
 
                 if (isMainMeal) {
@@ -633,3 +634,5 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
     </div>
   )
 }
+
+export default TodayDailyMenu;
