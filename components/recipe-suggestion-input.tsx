@@ -77,13 +77,15 @@ export function RecipeSuggestionInput({
         )
         break
       case "Enter":
-        e.preventDefault()
-        // If something is highlighted, select it; otherwise select the first suggestion
-        const indexToSelect = highlightedIndex >= 0 ? highlightedIndex : 0
-        if (filteredSuggestions[indexToSelect]) {
-          handleSuggestionClick(filteredSuggestions[indexToSelect])
+        // Only prevent default and select if a suggestion is ACTIVELY highlighted with arrows
+        if (highlightedIndex >= 0) {
+          e.preventDefault()
+          if (filteredSuggestions[highlightedIndex]) {
+            handleSuggestionClick(filteredSuggestions[highlightedIndex])
+          }
         }
-        break
+        // If nothing is highlighted, Enter will naturally create a newline in the textarea
+        break;
       case "Escape":
         setShowSuggestions(false)
         break

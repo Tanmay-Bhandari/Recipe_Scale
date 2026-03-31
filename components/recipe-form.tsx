@@ -358,6 +358,7 @@ export function RecipeForm({ onAdd, onClose, editingRecipe }: RecipeFormProps) {
                   src={imagePreview}
                   alt="Recipe preview"
                   fill
+                  sizes="(max-width: 768px) 160px, 192px"
                   className="object-cover"
                 />
                 <button

@@ -132,61 +132,93 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
   })
 
   const LUNCH_DEFAULT_ITEMS = [
-    "ઠાકોરજી મિષ્ટાન્ન",
-    "જેનરલ મિષ્ટાન્ન",
+    "ઠાકોરજી મિષ્ટાન્ન - ૧",
+    "ઠાકોરજી ફરસાણ - ૧",
     "ઠાકોરજી રોટલી",
-    "જેનરલ રોટલી",
-    "ઠાકોરજી તુવેરદાળ",
-    "જેનરલ તુવેરદાળ",
-    "ઠાકોરજી ભાત",
-    "જેનરલ ભાત",
-    "ઠાકોરજી શાક",
-    "જેનરલ શાક",
+    "ઠાકોરજી શાક - ૧",
+    "ઠાકોરજી શાક - ૨",
+    "ઠાકોરજી શાક - ૩",
+    "ઠાકોરજી શાક - ૪",
     "ઠાકોરજી કઠોળ",
-    "જેનરલ કઠોળ",
-    "ઠાકોરજી ફરસાણ",
+    "ઠાકોરજી ભાત",
+    "ઠાકોરજી દાળ",
     "ઠાકોરજી સલાડ",
+    "જેનરલ મિષ્ટાન્ન",
     "જેનરલ ફરસાણ",
-    "સલાડ",
+    "જેનરલ રોટલી",
+    "જેનરલ શાક - ૧",
+    "જેનરલ શાક - ૨",
+    "જેનરલ ભાત",
+    "જેનરલ દાળ",
+    "જેનરલ સલાડ",
+    "જેનરલ પાપડ/પાપડી",
+    "જેનરલ છાશ",
   ]
 
   const BREAKFAST_DEFAULT_ITEMS = [
-    "નાસ્તો - 1",
+    "ઠાકોરજી નાસ્તો - ૧",
+    "ઠાકોરજી નાસ્તો - ૨",
+    "ઠાકોરજી નાસ્તો - ૩",
+    "ઠાકોરજી નાસ્તો - ૪",
+    "ઠાકોરજી સૂપ",
+    "જેનરલ નાસ્તો - ૧",
+    "જેનરલ નાસ્તો - ૨",
+    "જેનરલ નાસ્તો - ૩",
+    "જેનરલ બેકરી - ૧",
+    "જેનરલ સૂકો નાસ્તો - ૧",
+    "ચા",
+    "ઉકાળો",
   ]
 
   const DINNER_DEFAULT_ITEMS = [
-    "ઠાકોરજી શાક",
-    "જેનરલ શાક",
+    "ઠાકોરજી વિશેષ વાનગી",
+    "ઠાકોરજી થેપલા/પરોઠા",
     "ઠાકોરજી ભાખરી",
-    "જેનરલ ભાખરી",
-    "ઠાકોરજી રોટલા",
-    "જેનરલ રોટલા",
+    "ઠાકોરજી રોટલી",
+    "ઠાકોરજી શાક - ૧",
+    "ઠાકોરજી શાક - ૨",
+    "ઠાકોરજી શાક - ૩",
+    "ઠાકોરજી શાક - ૪",
     "ઠાકોરજી ખીચડી",
-    "જેનરલ ખીચડી",
     "ઠાકોરજી કઢી",
-    "જેનરલ કઢી",
+    "જેનરલ વિશેષ વાનગી",
+    "જેનરલ ભાખરી/થેપલા",
+    "જેનરલ શાક - ૧",
+    "જેનરલ ખીચડી",
+    "જેનરલ દાળ/કઢી",
+    "જેનરલ પાપડ/પાપડી",
+    "જેનરલ છાશ",
   ]
 
   const [meals, setMeals] = useState<Record<MealType, DailyMenuMeal>>({
     breakfast: {
-      calories: "",
-      categories: "",
-      maximum: "",
-      totalOverride: "0",
+      vip: 0,
+      staff: 0,
+      guest: 0,
+      ajeevan: 0,
+      chhatralaya: 0,
+      yuvati: 0,
+      totalOverride: 0,
       items: BREAKFAST_DEFAULT_ITEMS.map((name) => namedItem(name)),
     },
     lunch: {
-      calories: "",
-      categories: "",
-      maximum: "",
-      totalOverride: "0",
+      vip: 0,
+      staff: 0,
+      guest: 0,
+      ajeevan: 0,
+      chhatralaya: 0,
+      yuvati: 0,
+      totalOverride: 0,
       items: LUNCH_DEFAULT_ITEMS.map((name) => namedItem(name)),
     },
     dinner: {
-      calories: "",
-      categories: "",
-      maximum: "",
-      totalOverride: "0",
+      vip: 0,
+      staff: 0,
+      guest: 0,
+      ajeevan: 0,
+      chhatralaya: 0,
+      yuvati: 0,
+      totalOverride: 0,
       items: DINNER_DEFAULT_ITEMS.map((name) => namedItem(name)),
     },
   })
@@ -224,9 +256,9 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
           setEditingDay(day)
         } else {
           setMeals({
-            breakfast: { calories: "", categories: "", maximum: "", totalOverride: "0", items: BREAKFAST_DEFAULT_ITEMS.map((name) => namedItem(name)) },
-            lunch: { calories: "", categories: "", maximum: "", totalOverride: "0", items: LUNCH_DEFAULT_ITEMS.map((name) => namedItem(name)) },
-            dinner: { calories: "", categories: "", maximum: "", totalOverride: "0", items: DINNER_DEFAULT_ITEMS.map((name) => namedItem(name)) },
+            breakfast: { vip: 0, staff: 0, guest: 0, ajeevan: 0, chhatralaya: 0, yuvati: 0, totalOverride: 0, items: BREAKFAST_DEFAULT_ITEMS.map((name) => namedItem(name)) },
+            lunch: { vip: 0, staff: 0, guest: 0, ajeevan: 0, chhatralaya: 0, yuvati: 0, totalOverride: 0, items: LUNCH_DEFAULT_ITEMS.map((name) => namedItem(name)) },
+            dinner: { vip: 0, staff: 0, guest: 0, ajeevan: 0, chhatralaya: 0, yuvati: 0, totalOverride: 0, items: DINNER_DEFAULT_ITEMS.map((name) => namedItem(name)) },
           })
           setDayOfWeek("")
           setTithiMonth("")
@@ -311,20 +343,28 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
 
   function updateMetricField(
     mealType: MealType,
-    field: "calories" | "categories" | "maximum" | "totalOverride",
+    field: keyof DailyMenuMeal,
     value: string
   ) {
     setMeals((prev) => {
-      const nextMeal = { ...prev[mealType], [field]: value }
+      const nextMeal = { ...prev[mealType] }
+      const numValue = parseInt(value, 10) || 0
+      
+      if (field !== 'items' && field !== 'categories') {
+        (nextMeal as any)[field] = numValue
+      } else if (field === 'categories') {
+        nextMeal[field] = value
+      }
 
-      // If we are updating VIP, Staff, or Guest, recalculate the total.
-      // If we are updating Total directly, use that value.
-      if (field !== "totalOverride") {
-        const total =
-          (parseFloat(nextMeal.calories) || 0) +
-          (parseFloat(nextMeal.categories) || 0) +
-          (parseFloat(nextMeal.maximum) || 0)
-        nextMeal.totalOverride = String(total)
+      // ONLY calculate totalOverride automatically if we are NOT manually setting it
+      if (field !== 'totalOverride') {
+        const vip = nextMeal.vip || 0
+        const staff = nextMeal.staff || 0
+        const guest = nextMeal.guest || 0
+        const ajeevan = nextMeal.ajeevan || 0
+        const chhatralaya = nextMeal.chhatralaya || 0
+        const yuvati = nextMeal.yuvati || 0
+        nextMeal.totalOverride = vip + staff + guest + ajeevan + chhatralaya + yuvati
       }
 
       return {
@@ -624,45 +664,70 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
               </div>
 
               {/* Metrics Card */}
-              <div className="mb-6 rounded-xl border border-border bg-background/30 p-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">વી.આઇ.પી.</Label>
+              <div className="mb-6 rounded-xl border border-border bg-background/30 p-5">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-x-0 gap-y-0 divide-x divide-y divide-border/60 border border-border/60 rounded-lg overflow-hidden">
+                  <div className="p-4 bg-background/50">
+                    <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider block text-center mb-1">આજીવન</Label>
                     <Input
                       type="number"
-                      value={meal.calories}
-                      onChange={(e) => updateMetricField(mealType, "calories", e.target.value)}
-                      className="mt-1 h-10 bg-background text-center font-medium border-border/60 focus:border-primary/50"
+                      value={meal.ajeevan || ""}
+                      onChange={(e) => updateMetricField(mealType, "ajeevan", e.target.value)}
+                      className="h-12 bg-transparent text-center font-black text-2xl border-none shadow-none focus-visible:ring-0"
                     />
                   </div>
-                  <div>
-                    <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">સ્ટાફ</Label>
+                  <div className="p-4 bg-background/50">
+                    <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider block text-center mb-1">વી.આઇ.પી.</Label>
                     <Input
                       type="number"
-                      value={meal.categories}
-                      onChange={(e) => updateMetricField(mealType, "categories", e.target.value)}
-                      className="mt-1 h-10 bg-background text-center font-medium border-border/60 focus:border-primary/50"
+                      value={meal.vip || ""}
+                      onChange={(e) => updateMetricField(mealType, "vip", e.target.value)}
+                      className="h-12 bg-transparent text-center font-black text-2xl border-none shadow-none focus-visible:ring-0"
                     />
                   </div>
-                  <div>
-                    <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">મહેમાન</Label>
+                  <div className="p-4 bg-background/50">
+                    <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider block text-center mb-1">છાત્રાલય</Label>
                     <Input
                       type="number"
-                      value={meal.maximum}
-                      onChange={(e) => updateMetricField(mealType, "maximum", e.target.value)}
-                      className="mt-1 h-10 bg-background text-center font-medium border-border/60 focus:border-primary/50"
+                      value={meal.chhatralaya || ""}
+                      onChange={(e) => updateMetricField(mealType, "chhatralaya", e.target.value)}
+                      className="h-12 bg-transparent text-center font-black text-2xl border-none shadow-none focus-visible:ring-0"
                     />
                   </div>
-                  <div className="flex flex-col">
-                    <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">કુલ</Label>
+                  <div className="row-span-2 p-4 flex flex-col items-center justify-center bg-primary/5">
+                    <Label className="text-sm font-black text-primary uppercase tracking-widest block text-center mb-2">કુલ</Label>
                     <Input
                       type="number"
-                      value={meal.totalOverride ||
-                        ((parseFloat(meal.calories) || 0) +
-                          (parseFloat(meal.categories) || 0) +
-                          (parseFloat(meal.maximum) || 0)).toString()}
+                      value={meal.totalOverride || "0"}
                       onChange={(e) => updateMetricField(mealType, "totalOverride", e.target.value)}
-                      className="mt-1 h-10 bg-primary/5 text-center font-bold border-primary/20 text-primary focus:ring-1 focus:ring-primary/40 rounded-md"
+                      className="h-20 bg-transparent text-center text-5xl font-black text-primary border-none shadow-none focus-visible:ring-0"
+                    />
+                  </div>
+                  
+                  <div className="p-4 bg-background/50">
+                    <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider block text-center mb-1">સ્ટાફ</Label>
+                    <Input
+                      type="number"
+                      value={meal.staff || ""}
+                      onChange={(e) => updateMetricField(mealType, "staff", e.target.value)}
+                      className="h-12 bg-transparent text-center font-black text-2xl border-none shadow-none focus-visible:ring-0"
+                    />
+                  </div>
+                  <div className="p-4 bg-background/50">
+                    <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider block text-center mb-1">મહેમાન</Label>
+                    <Input
+                      type="number"
+                      value={meal.guest || ""}
+                      onChange={(e) => updateMetricField(mealType, "guest", e.target.value)}
+                      className="h-12 bg-transparent text-center font-black text-2xl border-none shadow-none focus-visible:ring-0"
+                    />
+                  </div>
+                  <div className="p-4 bg-background/50">
+                    <Label className="text-sm font-bold text-muted-foreground uppercase tracking-wider block text-center mb-1">યુવતી</Label>
+                    <Input
+                      type="number"
+                      value={meal.yuvati || ""}
+                      onChange={(e) => updateMetricField(mealType, "yuvati", e.target.value)}
+                      className="h-12 bg-transparent text-center font-black text-2xl border-none shadow-none focus-visible:ring-0"
                     />
                   </div>
                 </div>
@@ -674,8 +739,8 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
                   const items = meal.items
 
                   // Helper to filter items for splitting into Thakorji and General groups
-                  // For breakfast, we show all in one table.
-                  const isMainMeal = (mealType === "lunch" || mealType === "dinner")
+                  // For breakfast, lunch, and dinner, we show split tables.
+                  const isMainMeal = (mealType === "breakfast" || mealType === "lunch" || mealType === "dinner")
 
                   const renderTable = (itemsToRender: DailyMenuItem[], title?: string, color: "orange" | "blue" = "orange") => {
                     const isBlue = color === "blue"

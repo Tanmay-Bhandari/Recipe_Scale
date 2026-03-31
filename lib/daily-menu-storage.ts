@@ -14,10 +14,16 @@ export type DailyMenuItem = {
 }
 
 export type DailyMenuMeal = {
-  calories: string
-  categories: string
-  maximum: string
-  totalOverride: string
+  calories?: number
+  categories?: string
+  maximum?: number
+  ajeevan?: number
+  chhatralaya?: number
+  yuvati?: number
+  vip?: number
+  staff?: number
+  guest?: number
+  totalOverride?: number
   items: DailyMenuItem[]
 }
 

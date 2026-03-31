@@ -340,6 +340,7 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
                             src={recipe.image}
                             alt={recipe.name}
                             fill
+                            sizes="36px"
                             className="object-cover"
                           />
                         </div>
@@ -396,6 +397,7 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
                         src={recipe.image}
                         alt={recipe.name}
                         fill
+                        sizes="(max-width: 768px) 32px, 40px"
                         className="object-cover"
                       />
                     </div>
@@ -682,6 +684,7 @@ export function FoodPacketCalculator({ recipes }: FoodPacketCalculatorProps) {
                           src={recipe.image}
                           alt={recipe.name}
                           fill
+                          sizes="32px"
                           className="object-cover"
                         />
                       </div>

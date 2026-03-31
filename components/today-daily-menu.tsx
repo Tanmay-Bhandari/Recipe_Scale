@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState, Fragment } from "react"
-import { CalendarDays, ChevronDown, ChevronUp, Utensils, Info, CloudOff } from "lucide-react"
+import { CalendarDays, ChevronDown, ChevronUp, Utensils, Info, CloudOff, Package } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   getTodayKey,
@@ -10,6 +10,7 @@ import {
   type DailyMenuState,
   type MealType,
   type DailyMenuItem,
+  type DailyMenuMeal,
 } from "@/lib/daily-menu-storage"
 import type { Recipe } from "@/lib/types"
 import { Input } from "@/components/ui/input"
@@ -79,7 +80,7 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
     }
   }
 
-  async function updateMetricField(mealType: MealType, field: "calories" | "categories" | "maximum" | "totalOverride", newValue: string) {
+  async function updateMetricField(mealType: MealType, field: keyof DailyMenuMeal, newValue: string) {
     if (!menu) return
 
     // Update local state for immediate feedback
@@ -87,13 +88,23 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
     const meal = updatedMenu.meals[mealType]
 
     // Update the specific field
-    meal[field] = newValue
+    const numValue = parseInt(newValue, 10) || 0
+    if (field !== 'items' && field !== 'categories') {
+      (meal as any)[field] = numValue
+    } else if (field === 'categories') {
+      meal[field] = newValue
+    }
 
-    // Calculate totalOverride automatically (based on VIP + STAFF + GUEST)
-    const vip = parseInt(meal.calories || "0", 10) || 0
-    const staff = parseInt(meal.categories || "0", 10) || 0
-    const guest = parseInt(meal.maximum || "0", 10) || 0
-    meal.totalOverride = String(vip + staff + guest)
+    // ONLY calculate totalOverride automatically if we are NOT manually setting it
+    if (field !== 'totalOverride') {
+      const vip = meal.vip || 0
+      const staff = meal.staff || 0
+      const guest = meal.guest || 0
+      const ajeevan = meal.ajeevan || 0
+      const chhatralaya = meal.chhatralaya || 0
+      const yuvati = meal.yuvati || 0
+      meal.totalOverride = vip + staff + guest + ajeevan + chhatralaya + yuvati
+    }
 
     setMenu({ ...updatedMenu })
 
@@ -111,6 +122,144 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
 
   const mealOrder: MealType[] = useMemo(() => ["breakfast", "lunch", "dinner"], [])
   const [selectedMeal, setSelectedMeal] = useState<MealType>(mealOrder[0])
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+
+  const handleDownloadPDF = async () => {
+    if (!menu) return
+    setIsGeneratingPDF(true)
+
+    const newWin = window.open('', '_blank')
+    if (!newWin) {
+      setIsGeneratingPDF(false)
+      return
+    }
+
+    const style = `
+      body{font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:40px;color:#0f172a;line-height:1.5}
+      h1,h2,h3,h4{color:#0f172a;margin-top:0}
+      .page-break{break-after:page}
+      .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:30px;border-bottom:2px solid #f1f5f9;padding-bottom:20px}
+      .date-info{font-size:18px;font-weight:bold}
+      .tithi-info{font-size:14px;color:#64748b;margin-top:4px}
+      .metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:30px;background:#f8fafc;padding:20px;border-radius:12px;border:1px solid #e2e8f0}
+      .metric-box{text-align:center;padding:12px;background:white;border-radius:8px;border:1px solid #e2e8f0;box-shadow:0 1px 2px rgba(0,0,0,0.05)}
+      .metric-label{font-size:12px;color:#64748b;font-weight:800;text-transform:uppercase;margin-bottom:4px}
+      .metric-value{font-size:24px;font-weight:900;color:#0f172a}
+      .metric-total{grid-column:span 1;display:flex;flex-direction:column;justify-content:center;background:#0f172a;color:white;border:none}
+      .metric-total .metric-label{color:rgba(255,255,255,0.7)}
+      .metric-total .metric-value{color:white;font-size:32px}
+      .meal-title{font-size:28px;font-weight:900;margin-bottom:20px;color:#0f172a;display:flex;align-items:center;gap:12px}
+      .meal-dot{width:12px;height:12px;border-radius:50%;background:#0f172a}
+      .table-container{margin-bottom:30px}
+      .table-header{font-size:18px;font-weight:800;margin-bottom:12px;padding-left:12px;border-left:4px solid #0f172a}
+      table{width:100%;border-collapse:collapse;margin-bottom:20px}
+      th,td{border:1px solid #e2e8f0;padding:12px;text-align:left}
+      th{background:#f8fafc;color:#64748b;font-size:12px;font-weight:bold;text-transform:uppercase;text-align:center}
+      .dish-cell{width:25%;font-weight:bold}
+      .item-cell{width:40%;color:#0f172a;white-space:pre-wrap}
+      .qty-cell{width:15%;text-align:center;font-weight:900;font-size:18px}
+      .adj-cell{width:20%;text-align:center}
+      .no-items{text-align:center;padding:40px;color:#64748b;font-style:italic}
+    `
+
+    const TITLES: Record<string, string> = { breakfast: "નાસ્તો", lunch: "બપોરે ભોજન", dinner: "રાત્રી ભોજન" }
+
+    const generateMealHtml = (mealType: MealType, index: number) => {
+      const meal = menu.meals[mealType]
+      const items = meal.items || []
+      const isMainMeal = true // We want all to show split if they have items
+      
+      const thakorjiItems = items.filter(it => it.label?.includes("ઠાકોરજી"))
+      const generalItems = items.filter(it => !it.label?.includes("ઠાકોરજી"))
+
+      const renderTableHtml = (itemsList: DailyMenuItem[], title: string) => {
+        if (itemsList.length === 0) return ""
+        return `
+          <div class="table-container">
+            <h4 class="table-header">${title}</h4>
+            <table>
+              <thead>
+                <tr>
+                  <th>વાનગી</th>
+                  <th>વસ્તુ નામ</th>
+                  <th>માપ</th>
+                  <th>વદ-ઘટ</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsList.map(it => `
+                  <tr>
+                    <td class="dish-cell">
+                      ${it.label ? `<div style="font-size:13px;font-weight:900;color:#0f172a;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.01em">${it.label}</div>` : ""}
+                      <div style="font-size:12px">${it.name || "-"}</div>
+                    </td>
+                    <td class="item-cell">${it.value || "-"}</td>
+                    <td class="qty-cell">${it.quantity ? `${it.quantity}${it.unit}` : "-"}</td>
+                    <td class="adj-cell">${it.adjustment || "-"} ${it.adjustmentUnit || ""}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `
+      }
+
+      return `
+        <div class="${index < 2 ? 'page-break' : ''}">
+          <div class="header">
+            <div>
+              <div class="date-info">${dayKey} — ${menu.dayOfWeek}</div>
+              <div class="tithi-info">${menu.tithiMonth} ${menu.tithiPhase} ${menu.tithiDay} ${!menu.tithiMonth && menu.tithi ? menu.tithi : ""}</div>
+            </div>
+            <div style="font-size:24px;font-weight:900;color:#0f172a">દૈનિક મેનુ</div>
+          </div>
+
+          <h3 class="meal-title"><span class="meal-dot"></span>${TITLES[mealType]}</h3>
+
+          <div class="metrics-grid">
+            <div class="metric-box"><div class="metric-label">આજીવન</div><div class="metric-value">${meal.ajeevan || 0}</div></div>
+            <div class="metric-box"><div class="metric-label">વી.આઇ.પી.</div><div class="metric-value">${meal.vip || 0}</div></div>
+            <div class="metric-box"><div class="metric-label">છાત્રાલય</div><div class="metric-value">${meal.chhatralaya || 0}</div></div>
+            <div class="metric-total"><div class="metric-label">કુલ</div><div class="metric-value">${meal.totalOverride || 0}</div></div>
+            <div class="metric-box"><div class="metric-label">સ્ટાફ</div><div class="metric-value">${meal.staff || 0}</div></div>
+            <div class="metric-box"><div class="metric-label">મહેમાન</div><div class="metric-value">${meal.guest || 0}</div></div>
+            <div class="metric-box"><div class="metric-label">યુવતી</div><div class="metric-value">${meal.yuvati || 0}</div></div>
+          </div>
+
+          ${thakorjiItems.length > 0 ? renderTableHtml(thakorjiItems, "ઠાકોરજી માટે") : ""}
+          ${generalItems.length > 0 ? renderTableHtml(generalItems, "જેનરલ") : ""}
+          ${items.length === 0 ? '<div class="no-items">કોઈ આઈટમ સેવ કરેલી નથી.</div>' : ""}
+        </div>
+      `
+    }
+
+    const doc = `
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>દૈનિક મેનુ — ${dayKey}</title>
+          <style>${style}</style>
+        </head>
+        <body>
+          ${generateMealHtml("breakfast", 0)}
+          ${generateMealHtml("lunch", 1)}
+          ${generateMealHtml("dinner", 2)}
+          <script>
+            setTimeout(() => {
+              window.print();
+              setTimeout(() => { window.close(); }, 500);
+            }, 500);
+          </script>
+        </body>
+      </html>
+    `
+
+    newWin.document.open()
+    newWin.document.write(doc)
+    newWin.document.close()
+    setIsGeneratingPDF(false)
+  }
 
   const renderTable = (itemsToRender: DailyMenuItem[], title?: string, color: "orange" | "blue" = "orange") => {
     const isBlue = color === "blue"
@@ -153,19 +302,19 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
                     <td className="p-4 align-top border-r border-border/30 bg-muted/5 min-h-[60px]">
                       <div className="space-y-2">
                         {it.label && (
-                          <div className={`text-xs font-extrabold uppercase tracking-widest ${isBlue ? 'text-blue-500/80' : 'text-primary/70'}`}>
+                          <div className={`text-base font-extrabold uppercase tracking-tight mb-0.5 ${isBlue ? 'text-blue-600' : 'text-primary'}`}>
                             {it.label}
                           </div>
                         )}
-                        <div className="text-lg font-bold text-foreground leading-snug break-words">
+                        <div className="text-lg font-bold text-foreground leading-snug break-words whitespace-pre-wrap">
                           {it.name || "-"}
                         </div>
-                        {isAdmin && matchingRecipe && hasQty && (
+                        {matchingRecipe && (
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={(e) => toggleItem(it.id, e)}
-                            className={`h-7 px-3 gap-1.5 text-xs font-bold uppercase tracking-wider rounded-lg ${isBlue ? 'text-blue-600 bg-blue-50 hover:bg-blue-100' : 'text-primary bg-primary/8 hover:bg-primary/15'}`}
+                            className={`h-7 px-3 gap-1.5 text-xs font-bold uppercase tracking-wider rounded-lg border ${isBlue ? 'text-blue-600 bg-blue-50 border-blue-100 hover:bg-blue-100' : 'text-primary bg-primary/8 border-primary/10 hover:bg-primary/15'}`}
                           >
                             <Utensils className="h-3.5 w-3.5" />
                             રેસીપી
@@ -175,7 +324,7 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
                       </div>
                     </td>
                     <td className="p-4 align-middle border-r border-border/30 text-center">
-                      <span className="text-lg font-medium text-foreground break-words text-center block w-full">{it.value || "-"}</span>
+                      <span className="text-lg font-medium text-foreground break-words text-center block w-full whitespace-pre-wrap">{it.value || "-"}</span>
                     </td>
                     <td className="p-4 align-middle border-r border-border/30 text-center">
                       {hasQty ? (
@@ -229,31 +378,48 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
                     </td>
                   </tr>
 
-                  {isAdmin && matchingRecipe && hasQty && isExpanded && (
+                  {matchingRecipe && isExpanded && (
                     <tr className="bg-muted/10">
                       <td colSpan={4} className="p-0 border-b border-border/50">
                         <div className={`overflow-hidden rounded-b-lg border-x ${isBlue ? 'border-blue-100 bg-blue-50/30' : 'border-primary/10 bg-primary/5 shadow-inner'}`}>
-                          <div className={`${isBlue ? 'bg-blue-100/50' : 'bg-primary/10'} px-4 py-2 flex items-center gap-2`}>
-                            <Info className={`h-4 w-4 ${isBlue ? 'text-blue-600' : 'text-primary'}`} />
-                            <p className="text-[11px] font-bold uppercase tracking-wider text-primary">
-                              પરિણામ: {it.quantity}{it.unit} માટે સામગ્રી
-                            </p>
+                          <div className={`${isBlue ? 'bg-blue-100/50' : 'bg-primary/10'} px-4 py-3 flex items-center justify-between`}>
+                            <div className="flex items-center gap-2">
+                              <Info className={`h-4 w-4 ${isBlue ? 'text-blue-600' : 'text-primary'}`} />
+                              <p className="text-[11px] font-bold uppercase tracking-wider text-primary">
+                                {!isAdmin ? "રેસીપી વિગતો" : `પરિણામ: ${it.quantity}${it.unit} માટે સામગ્રી`}
+                              </p>
+                            </div>
+                            {!hasQty && isAdmin && (
+                              <p className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-bold uppercase">માપ દાખલ કરો</p>
+                            )}
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-2 p-4">
-                            {matchingRecipe.ingredients.map((ing) => {
-                              const scalingFactor = it.quantity / (matchingRecipe.baseQuantity || 1)
-                              const scaledAmount = ing.amount * scalingFactor
-                              return (
-                                <div key={ing.id} className="flex items-center justify-between py-1 border-b border-border/30 last:border-0 md:[&:nth-last-child(-n+2)]:border-0 lg:[&:nth-last-child(-n+3)]:border-0">
-                                  <span className="text-[12px] font-medium text-foreground">{ing.name}</span>
-                                  <span className="text-[12px] font-bold text-primary">
-                                    {scaledAmount % 1 === 0 ? scaledAmount : scaledAmount.toFixed(2)}
-                                    {ing.unit}
-                                  </span>
-                                </div>
-                              )
-                            })}
-                          </div>
+                          
+                          {isAdmin ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-2 p-4">
+                              {matchingRecipe.ingredients.map((ing) => {
+                                // If quantity is 0 or missing, show base amounts (as if qty=1kg or 1pc) but with a note
+                                const scalingFactor = hasQty ? (it.quantity / (matchingRecipe.baseQuantity || 1)) : 0
+                                const scaledAmount = hasQty ? (ing.amount * scalingFactor) : ing.amount
+                                
+                                return (
+                                  <div key={ing.id} className="flex items-center justify-between py-1 border-b border-border/30 last:border-0 md:[&:nth-last-child(-n+2)]:border-0 lg:[&:nth-last-child(-n+3)]:border-0">
+                                    <span className="text-[12px] font-medium text-foreground">{ing.name}</span>
+                                    <span className={`text-[12px] font-bold ${hasQty ? 'text-primary' : 'text-muted-foreground italic'}`}>
+                                      {scaledAmount % 1 === 0 ? scaledAmount : scaledAmount.toFixed(2)}
+                                      {ing.unit}
+                                      {!hasQty && ` (Base)`}
+                                    </span>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          ) : (
+                            <div className="p-8 text-center bg-background/50">
+                              <p className="text-sm font-bold text-muted-foreground">
+                                આ રેસીપી જોવા માટે કૃપા કરીને એડમિન તરીકે લોગીન કરો.
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -287,6 +453,18 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
                 <p className="text-sm text-muted-foreground font-medium">
                   તમે સેવ કરેલ દૈનિક મેનુ અહીં જોઈ શકો છો.
                 </p>
+                <div className="mt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-2 font-bold bg-primary/5 border-primary/20 hover:bg-primary/10 text-primary"
+                    onClick={handleDownloadPDF}
+                    disabled={isGeneratingPDF || !menu}
+                  >
+                    <Package className={`h-4 w-4 ${isGeneratingPDF ? 'animate-spin' : ''}`} />
+                    {isGeneratingPDF ? "PDF બની રહ્યું છે..." : "PDF ડાઉનલોડ કરો"}
+                  </Button>
+                </div>
                 {isLoading && (
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                 )}
@@ -362,41 +540,69 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
 
           <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-md">
             {/* Meal Metrics Header - INTERACTIVE */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-border bg-muted/5 border-b border-border">
-              <div className="p-4 text-center space-y-1">
-                <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">વી.આઇ.પી.</p>
+            <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y divide-border bg-muted/5 border-b border-border">
+              <div className="p-5 text-center space-y-2">
+                <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">આજીવન</p>
                 <Input
                   type="number"
-                  value={menu.meals[selectedMeal].calories || "0"}
-                  onChange={(e) => updateMetricField(selectedMeal, "calories", e.target.value)}
-                  className="h-10 bg-transparent text-center text-xl font-bold border-none shadow-none focus-visible:ring-0"
+                  value={menu.meals[selectedMeal].ajeevan ?? ""}
+                  onChange={(e) => updateMetricField(selectedMeal, "ajeevan", e.target.value)}
+                  className="h-12 bg-transparent text-center text-3xl font-black border-none shadow-none focus-visible:ring-0"
                 />
               </div>
-              <div className="p-4 text-center space-y-1">
-                <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">સ્ટાફ</p>
+              <div className="p-5 text-center space-y-2">
+                <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">વી.આઇ.પી.</p>
                 <Input
                   type="number"
-                  value={menu.meals[selectedMeal].categories || "0"}
-                  onChange={(e) => updateMetricField(selectedMeal, "categories", e.target.value)}
-                  className="h-10 bg-transparent text-center text-xl font-bold border-none shadow-none focus-visible:ring-0"
+                  value={menu.meals[selectedMeal].vip ?? ""}
+                  onChange={(e) => updateMetricField(selectedMeal, "vip", e.target.value)}
+                  className="h-12 bg-transparent text-center text-3xl font-black border-none shadow-none focus-visible:ring-0"
                 />
               </div>
-              <div className="p-4 text-center space-y-1">
-                <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">મહેમાન</p>
+              <div className="p-5 text-center space-y-2">
+                <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">છાત્રાલય</p>
                 <Input
                   type="number"
-                  value={menu.meals[selectedMeal].maximum || "0"}
-                  onChange={(e) => updateMetricField(selectedMeal, "maximum", e.target.value)}
-                  className="h-10 bg-transparent text-center text-xl font-bold border-none shadow-none focus-visible:ring-0"
+                  value={menu.meals[selectedMeal].chhatralaya ?? ""}
+                  onChange={(e) => updateMetricField(selectedMeal, "chhatralaya", e.target.value)}
+                  className="h-12 bg-transparent text-center text-3xl font-black border-none shadow-none focus-visible:ring-0"
                 />
               </div>
-              <div className="p-4 text-center space-y-1 bg-primary/[0.03]">
-                <p className="text-[10px] font-extrabold uppercase tracking-widest text-primary">કુલ</p>
+              <div className="row-span-2 p-5 text-center flex flex-col justify-center items-center bg-primary/[0.05]">
+                <p className="text-sm font-black uppercase tracking-widest text-primary mb-3">કુલ</p>
                 <Input
                   type="number"
-                  value={menu.meals[selectedMeal].totalOverride || "0"}
+                  value={menu.meals[selectedMeal].totalOverride ?? ""}
                   onChange={(e) => updateMetricField(selectedMeal, "totalOverride", e.target.value)}
-                  className="h-10 bg-transparent text-center text-2xl font-black text-primary border-none shadow-none focus-visible:ring-0"
+                  className="h-20 bg-transparent text-center text-6xl font-black text-primary border-none shadow-none focus-visible:ring-0"
+                />
+              </div>
+
+              <div className="p-5 text-center space-y-2">
+                <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">સ્ટાફ</p>
+                <Input
+                  type="number"
+                  value={menu.meals[selectedMeal].staff ?? ""}
+                  onChange={(e) => updateMetricField(selectedMeal, "staff", e.target.value)}
+                  className="h-12 bg-transparent text-center text-3xl font-black border-none shadow-none focus-visible:ring-0"
+                />
+              </div>
+              <div className="p-5 text-center space-y-2">
+                <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">મહેમાન</p>
+                <Input
+                  type="number"
+                  value={menu.meals[selectedMeal].guest ?? ""}
+                  onChange={(e) => updateMetricField(selectedMeal, "guest", e.target.value)}
+                  className="h-12 bg-transparent text-center text-3xl font-black border-none shadow-none focus-visible:ring-0"
+                />
+              </div>
+              <div className="p-5 text-center space-y-2">
+                <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">યુવતી</p>
+                <Input
+                  type="number"
+                  value={menu.meals[selectedMeal].yuvati ?? ""}
+                  onChange={(e) => updateMetricField(selectedMeal, "yuvati", e.target.value)}
+                  className="h-12 bg-transparent text-center text-3xl font-black border-none shadow-none focus-visible:ring-0"
                 />
               </div>
             </div>
@@ -405,7 +611,7 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
               {(() => {
                 const meal = menu.meals[selectedMeal]
                 const items = meal.items
-                const isMainMeal = (selectedMeal === "lunch" || selectedMeal === "dinner")
+                const isMainMeal = (selectedMeal === "breakfast" || selectedMeal === "lunch" || selectedMeal === "dinner")
 
                 if (isMainMeal) {
                   const thakorjiItems = items.filter(it => it.label?.includes("ઠાકોરજી"))

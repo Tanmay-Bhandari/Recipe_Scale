@@ -42,6 +42,7 @@ export function RecipeCard({ recipe, onDelete, onEdit, isDimmed, onFocusToggle }
                 src={recipe.image}
                 alt={recipe.name}
                 fill
+                sizes="(max-width: 768px) 64px, 80px"
                 className="object-cover"
               />
             </div>
