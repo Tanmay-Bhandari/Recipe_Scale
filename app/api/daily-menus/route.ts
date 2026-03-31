@@ -7,8 +7,14 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
   try {
-    const fb = initFirebaseAdmin()
-    if (!fb?.firestore) return NextResponse.json({ error: 'Firebase Firestore not initialized' }, { status: 500 })
+    const { admin: fb, error } = initFirebaseAdmin()
+    if (error || !fb) {
+      return NextResponse.json({ 
+        error: 'Firebase Configuration Error', 
+        details: error,
+        help: 'Please add FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY to Vercel Environment Variables.'
+      }, { status: 500 })
+    }
     
     const firestore = fb.firestore()
     const snap = await firestore.collection('daily-menus').get()

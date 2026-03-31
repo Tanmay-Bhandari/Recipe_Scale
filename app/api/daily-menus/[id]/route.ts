@@ -8,8 +8,14 @@ export const dynamic = 'force-dynamic'
 export async function GET(req: NextRequest) {
   try {
     const id = req.nextUrl.pathname.split('/').pop() || ''
-    const fb = initFirebaseAdmin()
-    if (!fb?.firestore) return NextResponse.json({ error: 'Firebase Firestore not initialized' }, { status: 500 })
+    const { admin: fb, error } = initFirebaseAdmin()
+    if (error || !fb) {
+      return NextResponse.json({ 
+        error: 'Firebase Configuration Error', 
+        details: error,
+        help: 'Please add FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY to Vercel Environment Variables.'
+      }, { status: 500 })
+    }
     
     const firestore = fb.firestore()
     const docRef = await firestore.collection('daily-menus').doc(id).get()
@@ -30,8 +36,14 @@ export async function PUT(req: NextRequest) {
   try {
     const id = req.nextUrl.pathname.split('/').pop() || ''
     const data = await req.json()
-    const fb = initFirebaseAdmin()
-    if (!fb?.firestore) return NextResponse.json({ error: 'Firebase Firestore not initialized' }, { status: 500 })
+    const { admin: fb, error } = initFirebaseAdmin()
+    if (error || !fb) {
+      return NextResponse.json({ 
+        error: 'Firebase Configuration Error', 
+        details: error,
+        help: 'Please add FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY to Vercel Environment Variables.'
+      }, { status: 500 })
+    }
     
     const firestore = fb.firestore()
     await firestore.collection('daily-menus').doc(id).set(data)

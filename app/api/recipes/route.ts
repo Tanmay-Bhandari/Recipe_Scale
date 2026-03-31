@@ -7,8 +7,14 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(_req: NextRequest) {
   try {
-    const fb = initFirebaseAdmin()
-    if (!fb?.firestore) return NextResponse.json({ error: 'Firebase Firestore not initialized' }, { status: 500 })
+    const { admin: fb, error } = initFirebaseAdmin()
+    if (error || !fb) {
+      return NextResponse.json({ 
+        error: 'Firebase Configuration Error', 
+        details: error,
+        help: 'Please add FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY to Vercel Environment Variables.'
+      }, { status: 500 })
+    }
     const firestore = fb.firestore()
     const snap = await firestore.collection('recipes').get()
     const val: Record<string, any> = {}
@@ -23,8 +29,14 @@ export async function GET(_req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const data = await req.json()
-    const fb = initFirebaseAdmin()
-    if (!fb?.firestore) return NextResponse.json({ error: 'Firebase Firestore not initialized' }, { status: 500 })
+    const { admin: fb, error } = initFirebaseAdmin()
+    if (error || !fb) {
+      return NextResponse.json({ 
+        error: 'Firebase Configuration Error', 
+        details: error,
+        help: 'Please add FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY to Vercel Environment Variables.'
+      }, { status: 500 })
+    }
     const firestore = fb.firestore()
     // If client provided an `id` field and intends to use it as the document ID,
     // respect that by writing to `collection.doc(id)`. Otherwise use server-generated ID.
