@@ -674,6 +674,7 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
         <div className="flex gap-2 p-1.5 bg-muted/30 rounded-2xl w-full border border-border/50 shadow-inner">
           {(Object.keys(MEAL_TITLES) as MealType[]).map((mt) => (
             <button
+              type="button"
               key={mt}
               onClick={() => setSelectedMeal(mt)}
               className={`flex-1 rounded-xl px-4 py-3 text-base font-bold transition-all duration-200 ${selectedMeal === mt

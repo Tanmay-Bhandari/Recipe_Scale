@@ -17,15 +17,39 @@ export async function GET(req: NextRequest) {
     }
     
     const firestore = fb.firestore()
-    const snap = await firestore.collection('daily-menus').get()
+
+    // Try to read a small index doc first to avoid a large collection scan
     const keys: string[] = []
-    snap.forEach((doc: any) => { keys.push(doc.id) })
+    try {
+      const idxDoc = await firestore.collection('meta').doc('daily-menus-index').get()
+      if (idxDoc.exists) {
+        const data = idxDoc.data() as any
+        if (Array.isArray(data?.keys)) {
+          data.keys.forEach((k: string) => keys.push(k))
+        }
+      } else {
+        const snap = await firestore.collection('daily-menus').get()
+        snap.forEach((doc: any) => { keys.push(doc.id) })
+      }
+    } catch (e: any) {
+      // If index read fails, fall back to collection scan
+      try {
+        const snap = await firestore.collection('daily-menus').get()
+        snap.forEach((doc: any) => { keys.push(doc.id) })
+      } catch (innerErr) {
+        throw innerErr
+      }
+    }
 
     keys.sort((a, b) => (a < b ? 1 : -1))
     
     const res = NextResponse.json(keys)
     return applyCorsHeaders(res, req.headers.get('origin'))
   } catch (err: any) {
-    return NextResponse.json({ error: err?.message || String(err) }, { status: 500 })
+    const msg = err?.message || String(err)
+    if (err?.code === 8 || err?.code === 'resource-exhausted' || msg?.includes('RESOURCE_EXHAUSTED')) {
+      return NextResponse.json({ error: 'Quota exceeded: Firestore quota exhausted. Please enable billing or reduce requests.' }, { status: 429 })
+    }
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

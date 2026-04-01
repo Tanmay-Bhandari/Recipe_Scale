@@ -28,7 +28,13 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
     const res = NextResponse.json(docRef.data())
     return applyCorsHeaders(res, req.headers.get('origin'))
   } catch (err: any) {
-    return NextResponse.json({ error: err?.message || String(err) }, { status: 500 })
+    const msg = err?.message || String(err)
+    if (err?.code === 8 || err?.code === 'resource-exhausted' || msg?.includes('RESOURCE_EXHAUSTED')) {
+      const res = NextResponse.json({ error: 'Quota exceeded: Firestore quota exhausted. Please enable billing or reduce requests.' }, { status: 429 })
+      return applyCorsHeaders(res, req.headers.get('origin'))
+    }
+    const res = NextResponse.json({ error: msg }, { status: 500 })
+    return applyCorsHeaders(res, req.headers.get('origin'))
   }
 }
 
@@ -47,11 +53,23 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
     
     const firestore = fb.firestore()
     await firestore.collection('daily-menus').doc(id).set(data)
+
+    // Maintain a small index document to avoid expensive collection scans on list
+    try {
+      await firestore.collection('meta').doc('daily-menus-index').set({ keys: fb.firestore.FieldValue.arrayUnion(id) }, { merge: true })
+    } catch (e) {
+      console.error('Failed to update daily-menus index:', e)
+    }
     
     const res = NextResponse.json({ id })
     return applyCorsHeaders(res, req.headers.get('origin'))
   } catch (err: any) {
-    const res = NextResponse.json({ error: err?.message || String(err) }, { status: 500 })
+    const msg = err?.message || String(err)
+    if (err?.code === 8 || err?.code === 'resource-exhausted' || msg?.includes('RESOURCE_EXHAUSTED')) {
+      const res = NextResponse.json({ error: 'Quota exceeded: Firestore quota exhausted. Please enable billing or reduce requests.' }, { status: 429 })
+      return applyCorsHeaders(res, req.headers.get('origin'))
+    }
+    const res = NextResponse.json({ error: msg }, { status: 500 })
     return applyCorsHeaders(res, req.headers.get('origin'))
   }
 }
