@@ -89,6 +89,7 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
   const [isSyncing, setIsSyncing] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const saveNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const loadDataInProgressRef = useRef(false)
 
   const emptyItem = (label?: string): DailyMenuItem => ({
     id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -227,6 +228,10 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
   const [selectedMeal, setSelectedMeal] = useState<MealType>("breakfast")
 
   const loadData = useCallback(async (day: string) => {
+    // Prevent overlapping load requests which can reset inputs/focus repeatedly
+    if (loadDataInProgressRef.current) return
+    loadDataInProgressRef.current = true
+
     // Use helper to apply state safely
     const applyMenuState = (current: DailyMenuState | null) => {
       if (current && current.meals) {
@@ -275,6 +280,8 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
     } catch (err: any) {
       console.error("Error loading daily menu from server:", err)
       setErrorMsg(err.message || "Cloud sync error")
+    } finally {
+      loadDataInProgressRef.current = false
     }
   }, [])
 
