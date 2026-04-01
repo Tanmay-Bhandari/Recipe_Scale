@@ -69,18 +69,25 @@ export function initFirebaseAdmin() {
     }
 
     // Case 3: Application Default Credentials (ADC) fallback
-    try {
-      admin.initializeApp()
-      console.log('initFirebaseAdmin: initialized using Application Default Credentials')
-      return { admin, error: null }
-    } catch (e) {
-      // Ignore fallback failure
+    // Case 3: Application Default Credentials (ADC) fallback
+    // Avoid attempting ADC in production (e.g., Vercel) because it often
+    // results in confusing errors when no ADC is configured. Instead return
+    // a clear configuration error so the deployer can set the required env vars.
+    const runningInProd = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production'
+    if (!runningInProd) {
+      try {
+        admin.initializeApp()
+        console.log('initFirebaseAdmin: initialized using Application Default Credentials')
+        return { admin, error: null }
+      } catch (e) {
+        // Ignore fallback failure in non-production
+      }
     }
 
     // If we reach here, zero configuration was found
     return { 
       admin: null, 
-      error: 'Firebase Admin not initialized: No valid configuration found. Please check FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY env variables.' 
+      error: 'Firebase Admin not initialized: No valid configuration found. Please set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY environment variables (see https://cloud.google.com/docs/authentication/getting-started).' 
     }
 
   } catch (e: any) {
