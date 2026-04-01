@@ -1,0 +1,38 @@
+name: Backfill daily-menus index
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Write service account if provided
+        env:
+          SERVICE_ACCOUNT_JSON: ${{ secrets.SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -n "$SERVICE_ACCOUNT_JSON" ]; then
+            echo "$SERVICE_ACCOUNT_JSON" > service-account.json
+            chmod 600 service-account.json
+            echo "Wrote service-account.json"
+          else
+            echo "No SERVICE_ACCOUNT_JSON secret provided; relying on FIREBASE_* env secrets"
+          fi
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install firebase-admin
+        run: npm install firebase-admin
+
+      - name: Run backfill script
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
+          FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
+        run: node scripts/backfill-daily-menus-index.js
