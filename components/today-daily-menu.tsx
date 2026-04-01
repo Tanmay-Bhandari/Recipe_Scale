@@ -89,10 +89,10 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
     const updatedMenu = {
       ...menu,
       meals: {
-        ...menu.meals,
+        ...(menu.meals || {}),
         [mealType]: {
-          ...menu.meals[mealType],
-          items: menu.meals[mealType].items.map(i =>
+          ...(menu.meals?.[mealType] || ({} as any)),
+          items: (menu.meals?.[mealType]?.items || []).map(i =>
             i.id === itemId ? { ...i, ...fieldUpdates } : i
           ),
         },
@@ -105,7 +105,7 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
   function updateMetricField(mealType: MealType, field: keyof DailyMenuMeal, newValue: string) {
     if (!menu) return
 
-    const meal = { ...menu.meals[mealType] }
+    const meal = { ...(menu.meals?.[mealType] || ({} as any)) }
     const numValue = parseInt(newValue, 10) || 0
     if (field !== 'items' && field !== 'categories') {
       (meal as any)[field] = numValue
@@ -123,7 +123,7 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
       meal.totalOverride = vip + staff + guest + aaj + chhat + yuvati
     }
 
-    const updatedMenu = { ...menu, meals: { ...menu.meals, [mealType]: meal } }
+    const updatedMenu = { ...menu, meals: { ...(menu.meals || {}), [mealType]: meal } }
     setMenu(updatedMenu)
     scheduleSave(dayKey, updatedMenu)
   }
@@ -177,8 +177,8 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
     const TITLES: Record<string, string> = { breakfast: "નાસ્તો", lunch: "બપોરે ભોજન", dinner: "રાત્રી ભોજન" }
 
     const generateMealHtml = (mealType: MealType, index: number) => {
-      const meal = menu.meals[mealType]
-      const items = meal.items || []
+      const meal = menu.meals?.[mealType] || ({} as any)
+      const items = meal?.items || []
       const isMainMeal = true // We want all to show split if they have items
       
       const thakorjiItems = items.filter(it => it.label?.includes("ઠાકોરજી"))
@@ -654,7 +654,7 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
 
             <div className="p-6 md:p-8 bg-background/50">
               {(() => {
-                const meal = menu.meals[selectedMeal]
+                const meal = menu.meals?.[selectedMeal] || ({} as any)
                 const items = meal?.items || []
                 const isMainMeal = (selectedMeal === "breakfast" || selectedMeal === "lunch" || selectedMeal === "dinner")
 

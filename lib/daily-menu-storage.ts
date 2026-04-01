@@ -92,11 +92,17 @@ export async function loadDayMenuFromFirestore(dayKey: string): Promise<DailyMen
     
     const data = await res.json() as DailyMenuState
     
-    // DATA MIGRATION: Map old fields (calories, categories, maximum) to new fields (vip, staff, guest)
-    if (data && data.meals) {
-      (Object.keys(data.meals) as MealType[]).forEach(mt => {
+    // DATA MIGRATION & NORMALIZATION
+    if (data) {
+      if (!data.meals) data.meals = {} as any
+      
+      const mealTypes: MealType[] = ["breakfast", "lunch", "dinner"]
+      mealTypes.forEach(mt => {
+        if (!data.meals[mt]) {
+          data.meals[mt] = { items: [] } as DailyMenuMeal
+        }
+        
         const meal = data.meals[mt]
-        if (!meal) return
         
         // Ensure all numeric fields are actually parsed as numbers
         const toNum = (val: any) => {
@@ -129,6 +135,7 @@ export async function loadDayMenuFromFirestore(dayKey: string): Promise<DailyMen
         meal.staff = toNum(meal.staff)
         meal.guest = toNum(meal.guest)
         meal.totalOverride = toNum(meal.totalOverride)
+        if (!meal.items) meal.items = []
       })
     }
 

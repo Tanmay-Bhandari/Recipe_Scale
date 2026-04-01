@@ -229,9 +229,9 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
   const loadData = useCallback(async (day: string) => {
     // Use helper to apply state safely
     const applyMenuState = (current: DailyMenuState | null) => {
-      if (current) {
+      if (current && current.meals) {
         const migratedMeals = { ...current.meals }
-        const migrateItems = (items: DailyMenuItem[]) =>
+        const migrateItems = (items: DailyMenuItem[] = []) =>
           items.map(it => {
             if (!it.label && it.name) {
               return { ...it, label: it.name, name: "" }
@@ -239,10 +239,11 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
             return it
           })
 
-        migratedMeals.lunch = { ...migratedMeals.lunch, items: migrateItems(migratedMeals.lunch.items) }
-        migratedMeals.dinner = { ...migratedMeals.dinner, items: migrateItems(migratedMeals.dinner.items) }
+        if (migratedMeals.breakfast) migratedMeals.breakfast = { ...migratedMeals.breakfast, items: migrateItems(migratedMeals.breakfast.items) }
+        if (migratedMeals.lunch) migratedMeals.lunch = { ...migratedMeals.lunch, items: migrateItems(migratedMeals.lunch.items) }
+        if (migratedMeals.dinner) migratedMeals.dinner = { ...migratedMeals.dinner, items: migrateItems(migratedMeals.dinner.items) }
 
-        setMeals(migratedMeals)
+        setMeals(prev => ({ ...prev, ...migratedMeals }))
         setDayOfWeek(current.dayOfWeek ?? "")
         setTithiMonth(current.tithiMonth ?? "")
         setTithiPhase(current.tithiPhase ?? "")
@@ -275,7 +276,7 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
       console.error("Error loading daily menu from server:", err)
       setErrorMsg(err.message || "Cloud sync error")
     }
-  }, [BREAKFAST_DEFAULT_ITEMS, LUNCH_DEFAULT_ITEMS, DINNER_DEFAULT_ITEMS])
+  }, [])
 
   useEffect(() => {
     const fetchDays = async () => {
