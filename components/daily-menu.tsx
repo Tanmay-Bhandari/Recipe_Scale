@@ -295,9 +295,10 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
       }
     }
     fetchDays()
-
-    void loadData(selectedDay)
-  }, [selectedDay, loadData])
+    // NOTE: do NOT auto-load the selected day here to avoid frequent
+    // server reads. Loading will happen explicitly when user clicks
+    // "Load" or after a successful save/delete.
+  }, [])
 
   // Auto-calculate Day of Week when date changes
   useEffect(() => {
@@ -467,6 +468,13 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
       // Update saved days list locally
       setSavedDays((prev) => (prev.includes(day) ? prev : [day, ...prev]))
       setEditingDay(day)
+      // Re-load from cloud to ensure UI matches persisted state
+      try {
+        await loadData(day)
+      } catch (e) {
+        // swallow — we already show save notice and errors elsewhere
+        console.error('Failed to reload after save:', e)
+      }
     } catch (err: any) {
       console.error("Server sync failed:", err)
       setSaveNotice(`⚠️ સેવ કરવામાં નિષ્ફળ`)
@@ -533,12 +541,18 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
             <Label className="mb-1.5 block text-sm font-medium text-foreground">
               દિવસ પસંદ કરો
             </Label>
-            <Input
-              type="date"
-              value={selectedDay}
-              onChange={(e) => setSelectedDay(e.target.value)}
-              className="bg-background"
-            />
+            <div className="flex gap-2">
+              <Input
+                type="date"
+                value={selectedDay}
+                onChange={(e) => setSelectedDay(e.target.value)}
+                className="bg-background"
+              />
+              <Button type="button" variant="secondary" size="sm" onClick={() => void loadData(selectedDay)}>
+                લોડ
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">ડેટા માત્ર જ્યારે તમે લોડ, સેવ અથવા ડીલીટ કરો ત્યારે જ ક્લાઉડથી લોડ થશે.</p>
           </div>
 
           <div className="rounded-xl border border-border bg-background/50 p-4 lg:col-span-1">
