@@ -228,7 +228,7 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
     const fromMenuItems: Array<{ name: string }> = []
     const isHeading = (raw: string) => {
       const s = raw.trim().toLowerCase()
-      return s.startsWith('ઠાકોરજી ') || s.startsWith('જેનરલ ')
+      return s.startsWith('ઠાકોરજી ') || s.startsWith('જનરલ ')
     }
     try {
       const mealTypes: MealType[] = ['breakfast', 'lunch', 'dinner']
@@ -1023,7 +1023,7 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
                     return (
                       <div className="space-y-10">
                         {renderTable(thakorjiItems, "ઠાકોરજી માટે", "orange")}
-                        {renderTable(generalItems, "જેનરલ", "blue")}
+                        {renderTable(generalItems, "જનરલ", "blue")}
                       </div>
                     )
                   }

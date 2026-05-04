@@ -665,7 +665,7 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
                   return (
                     <div className="space-y-12">
                       {renderTable(thakorjiItems, "ઠાકોરજી માટે", "orange")}
-                      {renderTable(generalItems, "જેનરલ", "blue")}
+                      {renderTable(generalItems, "જનરલ", "blue")}
                     </div>
                   )
                 }
