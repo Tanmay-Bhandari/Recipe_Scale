@@ -199,10 +199,10 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
                 </tr>
               </thead>
               <tbody>
-                ${itemsList.map(it => `
+                      ${itemsList.map(it => `
                   <tr>
                     <td class="dish-cell">
-                      ${it.label ? `<div style="font-size:13px;font-weight:900;color:#0f172a;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.01em">${it.label}</div>` : ""}
+                      ${it.label ? `<div style="font-size:13px;font-weight:900;color:#0f172a;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.01em">${String(it.label).replace(/^\s*જનરલ\b/, 'જ.')}</div>` : ""}
                       <div style="font-size:12px">${it.name || "-"}</div>
                     </td>
                     <td class="item-cell">${it.value || "-"}</td>
@@ -315,7 +315,7 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
                       <div className="space-y-2">
                         {it.label && (
                           <div className={`text-base font-extrabold uppercase tracking-tight mb-0.5 ${isBlue ? 'text-blue-600' : 'text-primary'}`}>
-                            {it.label}
+                            {String(it.label).replace(/^\s*જનરલ\b/, 'જ.')}
                           </div>
                         )}
                         <div className="text-lg font-bold text-foreground leading-snug break-words whitespace-pre-wrap">
