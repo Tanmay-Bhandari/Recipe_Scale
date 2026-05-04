@@ -239,7 +239,7 @@ export function TodayDailyMenu({ recipes = [], isAdmin = false }: { recipes?: Re
           </div>
 
           ${thakorjiItems.length > 0 ? renderTableHtml(thakorjiItems, "ઠાકોરજી માટે") : ""}
-          ${generalItems.length > 0 ? renderTableHtml(generalItems, "જેનરલ") : ""}
+          ${generalItems.length > 0 ? renderTableHtml(generalItems, "જનરલ") : ""}
           ${items.length === 0 ? '<div class="no-items">કોઈ આઈટમ સેવ કરેલી નથી.</div>' : ""}
         </div>
       `

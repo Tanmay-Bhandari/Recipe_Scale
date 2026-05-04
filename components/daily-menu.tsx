@@ -19,6 +19,7 @@ import {
   type MealType,
   type DailyMenuState,
 } from "@/lib/daily-menu-storage"
+import { DAILY_MENU_STORAGE_KEY } from "@/lib/daily-menu-storage"
 import {
   Select,
   SelectContent,
@@ -88,6 +89,7 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
   const [saveNotice, setSaveNotice] = useState<string>("")
   const [isSyncing, setIsSyncing] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
   const saveNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const loadDataInProgressRef = useRef(false)
 
@@ -101,26 +103,8 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
     adjustment: "",
   })
 
-  // Combine Firestore recipes with predefined common names
-  const allSuggestions = useMemo(() => {
-    const fromRecipes = recipes.map(r => ({ name: r.name }))
-    const fromCommon = COMMON_SUGGESTIONS.map(name => ({ name }))
-
-    // Also include ingredients from all recipes
-    const fromIngredients: Array<{ name: string }> = []
-    recipes.forEach(r => {
-      r.ingredients.forEach(ing => {
-        if (ing.name) fromIngredients.push({ name: ing.name })
-      })
-    })
-
-    // Combined list: Dish Names + Common Suggestions + Ingredient Names
-    const combined = [...fromRecipes, ...fromCommon, ...fromIngredients]
-
-    // Sort and remove duplicates
-    const unique = Array.from(new Map(combined.map(item => [item.name, item])).values())
-    return unique.sort((a, b) => a.name.localeCompare(b.name, 'gu'))
-  }, [recipes])
+  // Combine Firestore recipes with predefined common names + today's menu values
+  // (moved below `meals` declaration to avoid TDZ)
 
   const namedItem = (label: string): DailyMenuItem => ({
     id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -145,16 +129,16 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
     "ઠાકોરજી ભાત",
     "ઠાકોરજી દાળ",
     "ઠાકોરજી સલાડ",
-    "જેનરલ મિષ્ટાન્ન",
-    "જેનરલ ફરસાણ",
-    "જેનરલ રોટલી",
-    "જેનરલ શાક - ૧",
-    "જેનરલ શાક - ૨",
-    "જેનરલ ભાત",
-    "જેનરલ દાળ",
-    "જેનરલ સલાડ",
-    "જેનરલ પાપડ/પાપડી",
-    "જેનરલ છાશ",
+    "જનરલ મિષ્ટાન્ન",
+    "જનરલ ફરસાણ",
+    "જનરલ રોટલી",
+    "જનરલ શાક - ૧",
+    "જનરલ શાક - ૨",
+    "જનરલ ભાત",
+    "જનરલ દાળ",
+    "જનરલ સલાડ",
+    "જનરલ પાપડ/પાપડી",
+    "જનરલ છાશ",
   ]
 
   const BREAKFAST_DEFAULT_ITEMS = [
@@ -163,11 +147,11 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
     "ઠાકોરજી નાસ્તો - ૩",
     "ઠાકોરજી નાસ્તો - ૪",
     "ઠાકોરજી સૂપ",
-    "જેનરલ નાસ્તો - ૧",
-    "જેનરલ નાસ્તો - ૨",
-    "જેનરલ નાસ્તો - ૩",
-    "જેનરલ બેકરી - ૧",
-    "જેનરલ સૂકો નાસ્તો - ૧",
+    "જનરલ નાસ્તો - ૧",
+    "જનરલ નાસ્તો - ૨",
+    "જનરલ નાસ્તો - ૩",
+    "જનરલ બેકરી - ૧",
+    "જનરલ સૂકો નાસ્તો - ૧",
     "ચા",
     "ઉકાળો",
   ]
@@ -183,13 +167,13 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
     "ઠાકોરજી શાક - ૪",
     "ઠાકોરજી ખીચડી",
     "ઠાકોરજી કઢી",
-    "જેનરલ વિશેષ વાનગી",
-    "જેનરલ ભાખરી/થેપલા",
-    "જેનરલ શાક - ૧",
-    "જેનરલ ખીચડી",
-    "જેનરલ દાળ/કઢી",
-    "જેનરલ પાપડ/પાપડી",
-    "જેનરલ છાશ",
+    "જનરલ વિશેષ વાનગી",
+    "જનરલ ભાખરી/થેપલા",
+    "જનરલ શાક - ૧",
+    "જનરલ ખીચડી",
+    "જનરલ દાળ/કઢી",
+    "જનરલ પાપડ/પાપડી",
+    "જનરલ છાશ",
   ]
 
   const [meals, setMeals] = useState<Record<MealType, DailyMenuMeal>>({
@@ -227,10 +211,57 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
 
   const [selectedMeal, setSelectedMeal] = useState<MealType>("breakfast")
 
+  // Combine Firestore recipes with predefined common names + today's menu values
+  const allSuggestions = useMemo(() => {
+    const fromRecipes = recipes.map(r => ({ name: r.name }))
+    const fromCommon = COMMON_SUGGESTIONS.map(name => ({ name }))
+
+    // Also include ingredients from all recipes
+    const fromIngredients: Array<{ name: string }> = []
+    recipes.forEach(r => {
+      r.ingredients.forEach(ing => {
+        if (ing.name) fromIngredients.push({ name: ing.name })
+      })
+    })
+
+    // Also include values/names currently present in today's menu (avoid headings)
+    const fromMenuItems: Array<{ name: string }> = []
+    const isHeading = (raw: string) => {
+      const s = raw.trim().toLowerCase()
+      return s.startsWith('ઠાકોરજી ') || s.startsWith('જેનરલ ')
+    }
+    try {
+      const mealTypes: MealType[] = ['breakfast', 'lunch', 'dinner']
+      mealTypes.forEach((mt) => {
+        const meal = meals?.[mt]
+        if (!meal || !Array.isArray(meal.items)) return
+        meal.items.forEach((it) => {
+          const raw = ((it.value || it.name || it.label) || '')
+          const name = raw.trim()
+          if (!name) return
+          if (isHeading(name)) return
+          // normalize to NFC and trim invisible characters
+          const normalized = name.normalize ? name.normalize('NFC') : name
+          fromMenuItems.push({ name: normalized })
+        })
+      })
+    } catch (e) {
+      // ignore
+    }
+
+    // Combined list: Dish Names + Common Suggestions + Ingredient Names + Today's values
+    const combined = [...fromRecipes, ...fromCommon, ...fromIngredients, ...fromMenuItems]
+
+    // Sort and remove duplicates
+    const unique = Array.from(new Map(combined.map(item => [item.name, item])).values())
+    return unique.sort((a, b) => a.name.localeCompare(b.name, 'gu'))
+  }, [recipes, meals])
+
   const loadData = useCallback(async (day: string) => {
     // Prevent overlapping load requests which can reset inputs/focus repeatedly
     if (loadDataInProgressRef.current) return
     loadDataInProgressRef.current = true
+    setIsLoading(true)
 
     // Use helper to apply state safely
     const applyMenuState = (current: DailyMenuState | null) => {
@@ -282,6 +313,7 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
       setErrorMsg(err.message || "Cloud sync error")
     } finally {
       loadDataInProgressRef.current = false
+      setIsLoading(false)
     }
   }, [])
 
@@ -295,10 +327,26 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
       }
     }
     fetchDays()
-    // NOTE: do NOT auto-load the selected day here to avoid frequent
-    // server reads. Loading will happen explicitly when user clicks
-    // "Load" or after a successful save/delete.
+    // Auto-load when the date changes (once per change)
+    void loadData(selectedDay)
   }, [])
+
+  useEffect(() => {
+    // Trigger load whenever selectedDay changes (user-picked)
+    if (!selectedDay) return
+    void loadData(selectedDay)
+  }, [selectedDay, loadData])
+
+  // Persist current menu state to localStorage so other components (Report) can
+  // immediately pick up newly typed values even before saving to server.
+  useEffect(() => {
+    try {
+      const state = { meals }
+      localStorage.setItem(DAILY_MENU_STORAGE_KEY, JSON.stringify(state))
+    } catch (e) {
+      // ignore storage errors
+    }
+  }, [meals])
 
   // Auto-calculate Day of Week when date changes
   useEffect(() => {
@@ -548,9 +596,11 @@ export function DailyMenu({ recipes }: DailyMenuProps) {
                 onChange={(e) => setSelectedDay(e.target.value)}
                 className="bg-background"
               />
-              <Button type="button" variant="secondary" size="sm" onClick={() => void loadData(selectedDay)}>
-                લોડ
-              </Button>
+              {isLoading ? (
+                <div className="h-7 w-7 flex items-center justify-center">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                </div>
+              ) : null}
             </div>
             <p className="text-xs text-muted-foreground mt-2">ડેટા માત્ર જ્યારે તમે લોડ, સેવ અથવા ડીલીટ કરો ત્યારે જ ક્લાઉડથી લોડ થશે.</p>
           </div>
